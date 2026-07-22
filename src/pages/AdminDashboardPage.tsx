@@ -1,60 +1,27 @@
-import { BookOpenCheck, Lightbulb, UsersRound } from "lucide-react";
-import GlassCard from "../components/common/GlassCard";
-import MetricCard from "../components/common/MetricCard";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { BarChart3, Filter, Lightbulb, UsersRound } from "lucide-react";
+import { useMemo, useState } from "react";
 import PageShell from "../components/common/PageShell";
-import { HeatmapPanel, InterestBarChart, MatchPieChart } from "../components/charts/AdminCharts";
-import { adminOverview } from "../data/mockData";
+import SignalMetric from "../components/product/SignalMetric";
+import { cohortRecords, majors, pathwayGuidance } from "../data/catalog";
+
+type FilterStage = "全部" | "低年级" | "高年级" | "研究生";
+function countBy(items: string[]) { return Object.entries(items.reduce<Record<string, number>>((acc, item) => ({ ...acc, [item]: (acc[item] ?? 0) + 1 }), {})).map(([name, value]) => ({ name, value })); }
 
 export default function AdminDashboardPage() {
-  return (
-    <PageShell
-      eyebrow="教师端 · 学院治理反馈"
-      title="学院群体分析仪表板"
-      description="把学生端的唤醒、匹配和路线图数据汇总为学院课程供给与实践训练建议。"
-    >
-      <section className="metric-grid four">
-        <MetricCard label="试点学生数" value={`${adminOverview.pilotStudents}`} detail="覆盖 4 个专业方向" />
-        <MetricCard label="低年级平均唤醒指数" value={`${adminOverview.awakeningAverage}`} detail="探索期持续提升" tone="green" />
-        <MetricCard label="高年级平均匹配度" value={`${adminOverview.matchAverage}`} detail="岗位准备度中高" tone="purple" />
-        <MetricCard label="共性短板能力" value="3 项" detail={adminOverview.commonWeaknesses.join(" / ")} tone="orange" />
-      </section>
-
-      <section className="dashboard-grid">
-        <GlassCard className="chart-card">
-          <h2>低年级兴趣方向分布</h2>
-          <InterestBarChart data={adminOverview.interestDistribution} />
-        </GlassCard>
-        <GlassCard className="chart-card">
-          <h2>高年级岗位适配度分布</h2>
-          <MatchPieChart data={adminOverview.matchDistribution} />
-        </GlassCard>
-        <GlassCard className="chart-card wide">
-          <h2>共性能力短板热力图</h2>
-          <HeatmapPanel data={adminOverview.heatmap} />
-        </GlassCard>
-        <GlassCard className="insight-card">
-          <Lightbulb size={26} />
-          <h2>学院建议</h2>
-          <div className="suggestion-list">
-            {adminOverview.suggestions.map((item) => (
-              <p key={item}>{item}</p>
-            ))}
-          </div>
-        </GlassCard>
-        <GlassCard className="insight-card">
-          <BookOpenCheck size={26} />
-          <h2>重点推荐课程</h2>
-          <div className="tag-row">
-            {adminOverview.recommendedCourses.map((item) => (
-              <span key={item}>{item}</span>
-            ))}
-          </div>
-          <div className="teacher-note">
-            <UsersRound size={18} />
-            面向大一至大四建立“认知唤醒、行业案例、项目实践、求职训练”的分层供给。
-          </div>
-        </GlassCard>
-      </section>
-    </PageShell>
-  );
+  const [stage, setStage] = useState<FilterStage>("全部");
+  const [major, setMajor] = useState("全部");
+  const [pathway, setPathway] = useState("全部");
+  const filtered = useMemo(() => cohortRecords.filter((record) => (stage === "全部" || record.stage === stage) && (major === "全部" || record.major === major) && (pathway === "全部" || record.pathway === pathway)), [stage, major, pathway]);
+  const interestData = useMemo(() => countBy(filtered.map((record) => record.interest)), [filtered]);
+  const gapData = useMemo(() => countBy(filtered.map((record) => record.gap)), [filtered]);
+  const completion = filtered.length ? Math.round(filtered.reduce((sum, item) => sum + item.completion, 0) / filtered.length) : 0;
+  const topGap = [...gapData].sort((a, b) => b.value - a.value)[0]?.name ?? "暂无";
+  return <PageShell mode="teacher" eyebrow="教师端 / 模拟洞察" title="把群体信号转成可以安排的教学支持。" description="以下均为内置的脱敏模拟样本，用于展示筛选与聚合逻辑，不代表真实学院统计。">
+    <section className="teacher-notice"><Filter size={19} /><p><strong>数据说明：</strong>不读取浏览器里的个人画像，也不展示任何可识别的学生记录。</p></section>
+    <section className="teacher-filters"><label>阶段<select aria-label="阶段" onChange={(event) => setStage(event.target.value as FilterStage)} value={stage}>{["全部", "低年级", "高年级", "研究生"].map((item) => <option key={item}>{item}</option>)}</select></label><label>专业<select aria-label="专业" onChange={(event) => setMajor(event.target.value)} value={major}><option>全部</option>{majors.map((item) => <option key={item}>{item}</option>)}</select></label><label>路径<select aria-label="路径" onChange={(event) => setPathway(event.target.value)} value={pathway}><option>全部</option>{Object.entries(pathwayGuidance).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}</select></label></section>
+    <section className="teacher-summary"><SignalMetric detail="筛选后的模拟记录数。" label="模拟样本" value={filtered.length} /><SignalMetric detail="群体任务闭环的平均状态。" label="平均完成度" tone="neutral" value={`${completion}%`} /><SignalMetric detail="最常出现的能力支持需求。" label="首要短板" tone="warm" value={topGap} /><SignalMetric detail="本次筛选所覆盖的培养阶段。" label="覆盖阶段" value={new Set(filtered.map((item) => item.stage)).size} /></section>
+    <section className="teacher-chart-grid"><article className="teacher-chart"><div><span className="section-kicker"><BarChart3 size={15} />兴趣倾向</span><h2>学生希望接近的场景</h2></div><ResponsiveContainer height={290} width="100%"><BarChart data={interestData}><CartesianGrid stroke="rgba(255,255,255,.1)" strokeDasharray="3 3" /><XAxis dataKey="name" interval={0} tick={{ fill: "#bcc7b9", fontSize: 11 }} /><YAxis allowDecimals={false} tick={{ fill: "#bcc7b9", fontSize: 11 }} /><Tooltip contentStyle={{ background: "#161b16", border: "1px solid #3a4937" }} /><Bar dataKey="value" fill="#76b900" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer></article><article className="teacher-chart"><div><span className="section-kicker"><UsersRound size={15} />资源需求</span><h2>需要优先提供的支持</h2></div><ResponsiveContainer height={290} width="100%"><BarChart data={gapData}><CartesianGrid stroke="rgba(255,255,255,.1)" strokeDasharray="3 3" /><XAxis dataKey="name" interval={0} tick={{ fill: "#bcc7b9", fontSize: 11 }} /><YAxis allowDecimals={false} tick={{ fill: "#bcc7b9", fontSize: 11 }} /><Tooltip contentStyle={{ background: "#161b16", border: "1px solid #3a4937" }} /><Bar dataKey="value" fill="#e7efe3" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer></article></section>
+    <section className="teaching-action"><Lightbulb size={25} /><div><span className="section-kicker">建议下一步</span><h2>围绕“{topGap}”提供一次可产出证据的支持。</h2><p>可以把它设计成跨课程作业、行业场景讲解、作品反馈或模拟表达，让学生留下可复用的项目、作品或经历描述；低年级优先探索场景，高年级再增加路径比较与表达训练。</p></div></section>
+  </PageShell>;
 }

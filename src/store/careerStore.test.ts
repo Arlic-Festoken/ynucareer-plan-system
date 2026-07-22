@@ -1,0 +1,24 @@
+import { describe, expect, it } from "vitest";
+import { blankAbilities } from "../data/catalog";
+import { useCareerStore } from "./careerStore";
+
+describe("career store", () => {
+  it("persists onboarding data in the active state and can reset it", () => {
+    const store = useCareerStore.getState();
+    store.resetDemo();
+    store.completeOnboarding({ id: "test-profile", role: "junior", grade: 3, major: "数据科学与大数据技术", targetPath: "employment", interests: ["数据与商业"], values: ["创造价值"], abilityScores: { ...blankAbilities } });
+    expect(useCareerStore.getState().hasOnboarded).toBe(true);
+    expect(useCareerStore.getState().profile.major).toBe("数据科学与大数据技术");
+    useCareerStore.getState().resetDemo();
+    expect(useCareerStore.getState().hasOnboarded).toBe(false);
+    expect(useCareerStore.getState().roadmapTasks).toHaveLength(0);
+  });
+
+  it("keeps an action reflection alongside its completed task", () => {
+    const store = useCareerStore.getState();
+    store.resetDemo();
+    store.setRoadmapTasks([{ id: "reflection-task", title: "完成访谈", detail: "记录一位从业者的经验", category: "career", priority: "high", semester: "本学期", completed: false }]);
+    store.updateRoadmapTask("reflection-task", { completed: true, reflection: "我确认自己更想解决真实业务问题。" });
+    expect(useCareerStore.getState().roadmapTasks[0]).toMatchObject({ completed: true, reflection: "我确认自己更想解决真实业务问题。" });
+  });
+});

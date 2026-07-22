@@ -1,7 +1,14 @@
 node_modules/
+.env
+.env.local
+.env.*
+!.env.example
 dist/
 .vite/
 .playwright-cli/
+test-results/
+playwright-report/
 dev-server.log
 output/
 *.tsbuildinfo
+.superpowers/

@@ -1,160 +1,41 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, BadgeCheck, BrainCircuit, Search } from "lucide-react";
-import { useState } from "react";
-import AppleButton from "../components/common/AppleButton";
-import GlassCard from "../components/common/GlassCard";
-import MetricCard from "../components/common/MetricCard";
+import { ArrowRight, CheckCircle2, Search, SlidersHorizontal, Sparkles, Target, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import PageShell from "../components/common/PageShell";
 import AbilityRadar from "../components/charts/AbilityRadar";
-import { abilityLabels, jobs, matchResults, students } from "../data/mockData";
-import type { AbilityScores, JobProfile, MatchResult } from "../types";
+import { abilityKeys, type AbilityKey } from "../domain";
+import { abilityLabels, jobs, pathwayGuidance } from "../data/catalog";
+import { buildPathwayTasks, buildRoadmap, calculateMatch } from "../services/recommendation";
+import { useCareerStore } from "../store/careerStore";
+
+const pathwayEntries = Object.entries(pathwayGuidance) as Array<[keyof typeof pathwayGuidance, (typeof pathwayGuidance)[keyof typeof pathwayGuidance]]>;
 
 export default function MatchingPage() {
-  const [selectedJobId, setSelectedJobId] = useState("data-analyst");
-  const [analysisVisible, setAnalysisVisible] = useState(true);
-  const student = students.junior;
-  const selectedJob = jobs.find((job) => job.id === selectedJobId) ?? jobs[0];
-  const match =
-    matchResults.find((item) => item.jobId === selectedJob.id) ??
-    createFallbackMatch(student.id, selectedJob, student.abilityScores);
-  const gapText = match.gaps
-    .slice(0, 3)
-    .map((gap) => gap.ability.replace(" 数据处理能力", ""))
-    .join("、");
+  const [query, setQuery] = useState("");
+  const profile = useCareerStore((state) => state.profile);
+  const selectedJobId = useCareerStore((state) => state.selectedJobId);
+  const roadmapTasks = useCareerStore((state) => state.roadmapTasks);
+  const updateProfile = useCareerStore((state) => state.updateProfile);
+  const setSelectedJobId = useCareerStore((state) => state.setSelectedJobId);
+  const setRoadmapTasks = useCareerStore((state) => state.setRoadmapTasks);
+  const job = jobs.find((item) => item.id === selectedJobId) ?? jobs[0];
+  const diagnosis = useMemo(() => calculateMatch(profile, job), [profile, job]);
+  const pathway = pathwayGuidance[profile.targetPath];
+  const gaps = diagnosis.gaps.filter((gap) => gap.gap > 0).slice(0, 3);
+  const normalizedQuery = query.trim().toLocaleLowerCase("zh-CN");
+  const visibleJobs = useMemo(() => normalizedQuery
+    ? jobs.filter((item) => [item.title, item.industry, item.description].some((value) => value.toLocaleLowerCase("zh-CN").includes(normalizedQuery)))
+    : jobs, [normalizedQuery]);
+  const generate = () => setRoadmapTasks(profile.targetPath === "employment" ? buildRoadmap(profile, diagnosis) : buildPathwayTasks(profile.targetPath));
 
-  function runAnalysis(jobId: string) {
-    setSelectedJobId(jobId);
-    setAnalysisVisible(false);
-    window.setTimeout(() => setAnalysisVisible(true), 420);
-  }
-
-  return (
-    <PageShell
-      eyebrow="高年级 · 决策期"
-      title="岗位精准匹配"
-      description="展示版用预设岗位画像和能力画像生成差距解释，体现系统方法论和产品闭环。"
-    >
-      <section className="metric-grid">
-        <MetricCard label="目标岗位" value={selectedJob.title} detail={selectedJob.industry} />
-        <MetricCard label="岗位匹配度" value={`${match.matchScore}%`} detail="能力差距加权计算" tone="green" />
-        <MetricCard label="就业准备度" value={match.readinessLevel} detail={`关键短板：${gapText}`} tone="orange" />
-      </section>
-
-      <section className="two-column">
-        <GlassCard className="job-selector">
-          <div className="search-box">
-            <Search size={18} />
-            <span>搜索或选择推荐岗位</span>
-          </div>
-          <div className="job-list">
-            {jobs.map((job) => (
-              <button
-                className={job.id === selectedJobId ? "active" : ""}
-                key={job.id}
-                onClick={() => runAnalysis(job.id)}
-              >
-                <strong>{job.title}</strong>
-                <span>{job.description}</span>
-              </button>
-            ))}
-          </div>
-          <div className="formula-card">
-            <BrainCircuit size={20} />
-            <p>MatchScore = 100 - Σ wi × max(0, Required_i - Current_i)</p>
-          </div>
-        </GlassCard>
-
-        <GlassCard className="match-panel">
-          <AnimatePresence mode="wait">
-            {analysisVisible ? (
-              <motion.div
-                key={selectedJobId}
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-              >
-                <div className="panel-title">
-                  <span className="eyebrow">能力画像 vs 岗位画像</span>
-                  <h2>{selectedJob.title} 匹配诊断</h2>
-                </div>
-                <AbilityRadar current={student.abilityScores} required={selectedJob.requiredAbilities} />
-                <div className="percentile-box">
-                  <BadgeCheck size={20} />
-                  <span>当前位于同目标学生前 {match.percentile}%；完成推荐路径预计提升至前 {match.projectedPercentile}%</span>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div className="loading-panel" key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                正在分析能力画像并匹配目标岗位要求...
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </GlassCard>
-      </section>
-
-      <section className="gap-grid">
-        {match.gaps.map((gap, index) => (
-          <GlassCard className="gap-card" delay={index * 0.07} key={gap.ability}>
-            <span className={`impact impact-${gap.impact}`}>影响程度：{gap.impact}</span>
-            <h3>{gap.ability}</h3>
-            <div className="gap-score">
-              <span>当前 {gap.current}</span>
-              <i />
-              <span>要求 {gap.required}</span>
-              <strong>差距 {gap.gap}</strong>
-            </div>
-            <p>{gap.explanation}</p>
-          </GlassCard>
-        ))}
-      </section>
-
-      <GlassCard className="summary-card">
-        <h2>匹配结论</h2>
-        <p>{match.summary}</p>
-        <a href="/student/roadmap">
-          <AppleButton>
-            生成成长路线图 <ArrowRight size={18} />
-          </AppleButton>
-        </a>
-      </GlassCard>
-    </PageShell>
-  );
-}
-
-function createFallbackMatch(studentId: string, job: JobProfile, current: AbilityScores): MatchResult {
-  const keys = Object.keys(abilityLabels) as Array<keyof AbilityScores>;
-  const totalGap = keys.reduce((sum, key) => {
-    const weight = job.weight[key] ?? 1;
-    return sum + Math.max(0, job.requiredAbilities[key] - current[key]) * weight;
-  }, 0);
-  const matchScore = Math.max(60, Math.round(100 - totalGap / 2.8));
-  const gaps = keys
-    .map((key) => ({
-      key,
-      gap: Math.max(0, job.requiredAbilities[key] - current[key]),
-    }))
-    .sort((a, b) => b.gap - a.gap)
-    .slice(0, 3)
-    .map(({ key, gap }) => ({
-      ability: abilityLabels[key],
-      current: current[key],
-      required: job.requiredAbilities[key],
-      gap,
-      impact: gap >= 16 ? "高" : gap >= 9 ? "中" : "低",
-      explanation: `${job.title} 对${abilityLabels[key]}要求较高，当前能力已具备基础，但仍需要通过课程、项目或实践进一步形成可展示证据。`,
-    })) as MatchResult["gaps"];
-
-  return {
-    studentId,
-    jobId: job.id,
-    matchScore,
-    readinessLevel: matchScore >= 88 ? "高" : matchScore >= 78 ? "中高" : matchScore >= 68 ? "中" : "低",
-    percentile: Math.max(24, 65 - Math.round(matchScore / 3)),
-    projectedPercentile: Math.max(18, 54 - Math.round(matchScore / 3)),
-    gaps,
-    summary: `综合判断：你与${job.title}岗位具有可继续发展的适配潜力，建议优先补齐${gaps
-      .slice(0, 2)
-      .map((gap) => gap.ability)
-      .join("、")}，并尽快把学习结果沉淀为项目作品和面试表达材料。`,
-  };
+  return <PageShell eyebrow="高年级决策" title="先选一个参照目标，再把差距变成行动。" description="这里的准备度只用于自我诊断。它不是录取、求职或任何未来结果的概率。">
+    <section className="path-selector" aria-label="当前优先路径">{pathwayEntries.map(([key, item]) => <button className={profile.targetPath === key ? "is-active" : ""} key={key} onClick={() => updateProfile({ targetPath: key })} type="button"><span>{item.label}</span><small>{item.description}</small></button>)}</section>
+    {profile.targetPath !== "employment" ? <section className="alternative-path"><div><span className="section-kicker">当前路径 / {pathway.label}</span><h2>{pathway.description}</h2><ol>{pathway.tasks.map((task) => <li key={task}>{task}</li>)}</ol></div><aside><span className="signal-label">下一步</span><strong>生成本学期行动计划</strong><p>计划可以继续修改，完成后请把成果和复盘留下来。</p><button className="button button-primary" onClick={generate} type="button">生成{pathway.label}行动计划 <ArrowRight size={16} /></button>{roadmapTasks.length > 0 && <Link className="button button-quiet" to="/student/roadmap">查看已生成计划</Link>}</aside></section> : <>
+      <section className="diagnosis-layout"><div className="target-picker"><span className="section-kicker">选择一个参照岗位</span><h2>选择一个想靠近的岗位</h2><p>这不是承诺。它只是帮助你识别应该优先积累哪类证据。</p><label className="job-search"><span><Search size={16} />岗位搜索</span><div><input onChange={(event) => setQuery(event.target.value)} placeholder="搜索岗位、行业或工作内容" type="search" value={query} />{query && <button aria-label="清空岗位搜索" onClick={() => setQuery("")} type="button"><X size={15} /></button>}</div><small aria-live="polite">{visibleJobs.length} 个结果</small></label><div className="job-options">{visibleJobs.map((item) => <button className={item.id === job.id ? "is-selected" : ""} key={item.id} onClick={() => setSelectedJobId(item.id)} type="button"><span>{item.industry}</span><strong>{item.title}</strong><p>{item.description}</p></button>)}{visibleJobs.length === 0 && <div className="job-empty"><Search size={20} /><strong>没有找到匹配岗位</strong><p>换一个更宽的关键词，例如“数据”“教育”或“AI”。</p><button className="button button-quiet" onClick={() => setQuery("")} type="button">清空搜索</button></div>}</div></div>
+        <aside className="match-signal-panel"><span className="signal-label">准备度 / 规则计算</span><strong className="match-score">{diagnosis.score}</strong><p>{diagnosis.benchmark}</p><i /><small>来自你当前自评与岗位能力要求的加权比较</small><AbilityRadar current={profile.abilityScores} required={job.requiredAbilities} /></aside></section>
+      <section className="diagnosis-explainer"><div><span className="section-kicker">先看结论</span><h2>最值得补齐的三项证据</h2><p>{diagnosis.explanation}</p></div><div className="gap-list">{gaps.map((gap, index) => <article key={gap.ability}><span>0{index + 1}</span><div><strong>{abilityLabels[gap.ability]}</strong><p>{gap.explanation}</p></div><b>差 {gap.gap}</b></article>)}{!gaps.length && <article><CheckCircle2 size={20} /><div><strong>主要能力已覆盖</strong><p>下一步沉淀为作品、实践或能讲清楚的经历。</p></div></article>}</div></section>
+      <section className="ability-tuning"><div><span className="section-kicker"><SlidersHorizontal size={15} />更新自评</span><h2>如实更新，结果会重新计算。</h2><p>这不是考试分数。只填写你现在能用成果或经历说明的水平。</p></div><div className="ability-control-list">{abilityKeys.map((key: AbilityKey) => <label key={key}><span>{abilityLabels[key]}</span><input aria-label={abilityLabels[key]} max="100" min="0" onChange={(event) => updateProfile({ abilityScores: { ...profile.abilityScores, [key]: Number(event.target.value) } })} type="range" value={profile.abilityScores[key]} /><output>{profile.abilityScores[key]}</output></label>)}</div></section>
+      <section className="plan-cta"><div><Target size={25} /><div><span className="section-kicker">把诊断变成节奏</span><h2>不要同时补完所有能力。</h2><p>系统会从最关键的差距开始，为本学期和下一个阶段安排课程、项目、实践与表达证据。</p></div></div><div><button className="button button-primary" onClick={generate} type="button"><Sparkles size={16} />生成成长路线图</button>{roadmapTasks.length > 0 && <Link className="button button-quiet" to="/student/roadmap">查看已生成计划</Link>}</div></section>
+    </>}
+  </PageShell>;
 }

@@ -1,85 +1,26 @@
-import { motion } from "framer-motion";
-import { ArrowRight, TrendingUp } from "lucide-react";
-import { Link } from "react-router-dom";
-import AppleButton from "../components/common/AppleButton";
-import GlassCard from "../components/common/GlassCard";
-import MetricCard from "../components/common/MetricCard";
+import { Plus, Route } from "lucide-react";
+import { useMemo, useState } from "react";
 import PageShell from "../components/common/PageShell";
-import { roadmap } from "../data/mockData";
-
-const prediction = [
-  ["当前匹配度", "82%"],
-  ["第一阶段后", "87%"],
-  ["第二阶段后", "91%"],
-  ["第三阶段后", "94%"],
-];
+import TaskList from "../components/common/TaskList";
+import EmptyState from "../components/product/EmptyState";
+import ProgressRail from "../components/product/ProgressRail";
+import type { ActionTask } from "../domain";
+import { useCareerStore } from "../store/careerStore";
 
 export default function RoadmapPage() {
-  return (
-    <PageShell
-      eyebrow="时序化成长导航"
-      title="个性化成长路线图"
-      description="系统把岗位差距转成按学期推进的课程、项目、竞赛、实践和求职行动。"
-    >
-      <section className="metric-grid">
-        <MetricCard label="目标岗位" value={roadmap.targetJob} detail="数据智能方向" />
-        <MetricCard label="当前匹配度" value="82%" detail="能力补齐型阶段" tone="orange" />
-        <MetricCard label="预计完成后" value="94%" detail="进入高准备度区间" tone="green" />
-      </section>
+  const profile = useCareerStore((state) => state.profile);
+  const roadmapTasks = useCareerStore((state) => state.roadmapTasks);
+  const updateRoadmapTask = useCareerStore((state) => state.updateRoadmapTask);
+  const addRoadmapTask = useCareerStore((state) => state.addRoadmapTask);
+  const [title, setTitle] = useState("");
+  const completed = roadmapTasks.filter((task) => task.completed).length;
+  const groups = useMemo(() => Array.from(roadmapTasks.reduce((map, task) => { const list = map.get(task.semester) ?? []; list.push(task); map.set(task.semester, list); return map; }, new Map<string, ActionTask[]>()).entries()), [roadmapTasks]);
+  function addTask(event: React.FormEvent) { event.preventDefault(); if (!title.trim()) return; addRoadmapTask({ id: `custom-${Date.now()}`, title: title.trim(), detail: "由你添加的个人行动；完成后写下这一步带来的信息。", category: "practice", priority: "medium", semester: "本学期", completed: false }); setTitle(""); }
+  const entry = profile.grade <= 2 ? "/student/awakening" : "/student/matching";
 
-      <section className="two-column wide-left">
-        <GlassCard className="timeline-card">
-          <div className="panel-title">
-            <span className="eyebrow">按学期生成</span>
-            <h2>成长行动时间轴</h2>
-          </div>
-          <div className="timeline">
-            {roadmap.semesters.map((semester, index) => (
-              <motion.div
-                className="timeline-item"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.12 }}
-                key={semester.name}
-              >
-                <div className="timeline-dot">{index + 1}</div>
-                <div>
-                  <h3>{semester.name}</h3>
-                  <p>{semester.goal}</p>
-                  <div className="task-list">
-                    {semester.tasks.map((task) => (
-                      <div className="task-card" key={task.title}>
-                        <span>{task.type}</span>
-                        <strong>{task.title}</strong>
-                        <small>{task.priority}优先级 · {task.expectedOutcome}</small>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </GlassCard>
-
-        <GlassCard className="prediction-card">
-          <TrendingUp size={26} />
-          <h2>能力提升预测</h2>
-          <div className="prediction-list">
-            {prediction.map(([label, value], index) => (
-              <div key={label}>
-                <span>{label}</span>
-                <strong>{value}</strong>
-                <i style={{ width: `${72 + index * 7}%` }} />
-              </div>
-            ))}
-          </div>
-          <Link to="/admin/dashboard">
-            <AppleButton>
-              查看学院反馈 <ArrowRight size={18} />
-            </AppleButton>
-          </Link>
-        </GlassCard>
-      </section>
-    </PageShell>
-  );
+  return <PageShell eyebrow="行动计划" title="让计划进入真实的时间里。" description="不要追求一次做完。每完成一件事，记录它带来的发现，再决定接下来是否继续。">
+    <section className="roadmap-overview"><div><Route size={27} /><div><span className="section-kicker">本阶段</span><h2>{roadmapTasks.length ? "你的行动正在积累证据" : "先生成一份有起点的计划"}</h2><p>{roadmapTasks.length ? "计划按时间展开；完成后可留下简短复盘。" : "从方向探索或目标诊断开始，系统会生成可编辑的初始任务。"}</p></div></div>{roadmapTasks.length > 0 && <ProgressRail current={completed} label="已完成" total={roadmapTasks.length} />}</section>
+    {!roadmapTasks.length ? <EmptyState action="去生成行动计划" detail="先从一个方向或一个目标岗位开始。系统会把结果转换为可以执行的第一批任务。" title="这里还没有行动任务" to={entry} /> : <section className="roadmap-groups">{groups.map(([semester, tasks]) => <section className="roadmap-group" key={semester}><div className="roadmap-group-heading"><span>{semester}</span><p>{tasks.filter((task) => task.completed).length} / {tasks.length} 已完成</p></div><TaskList onSaveReflection={(task, reflection) => updateRoadmapTask(task.id, { reflection })} onToggle={(task) => updateRoadmapTask(task.id, { completed: !task.completed })} tasks={tasks} /></section>)}</section>}
+    <form className="quick-add" onSubmit={addTask}><div><span className="section-kicker">补充自己的行动</span><label>这周想推进的一件事<input onChange={(event) => setTitle(event.target.value)} placeholder="例如：报名参加校内数据挑战赛" value={title} /></label></div><button className="button button-secondary" type="submit"><Plus size={17} />加入计划</button></form>
+  </PageShell>;
 }

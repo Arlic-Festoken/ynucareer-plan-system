@@ -1,27 +1,30 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import AdminDashboardPage from "./pages/AdminDashboardPage";
-import AwakeningPage from "./pages/AwakeningPage";
-import DemoFlowPage from "./pages/DemoFlowPage";
-import LandingPage from "./pages/LandingPage";
-import LoginPage from "./pages/LoginPage";
-import MatchingPage from "./pages/MatchingPage";
-import RoadmapPage from "./pages/RoadmapPage";
-import StudentHomePage from "./pages/StudentHomePage";
+import RoleRoute from "./components/common/RoleRoute";
+
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
+const StudentHomePage = lazy(() => import("./pages/StudentHomePage"));
+const AwakeningPage = lazy(() => import("./pages/AwakeningPage"));
+const MatchingPage = lazy(() => import("./pages/MatchingPage"));
+const RoadmapPage = lazy(() => import("./pages/RoadmapPage"));
+const GraduatePage = lazy(() => import("./pages/GraduatePage"));
+const AdminDashboardPage = lazy(() => import("./pages/AdminDashboardPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+
+function PageFallback() { return <div className="route-loader" role="status">正在加载页面…</div>; }
 
 export default function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/student/home" element={<StudentHomePage />} />
-      <Route path="/student/awakening" element={<AwakeningPage />} />
-      <Route path="/student/vision" element={<AwakeningPage initialStep={4} />} />
-      <Route path="/student/action-plan" element={<AwakeningPage initialStep={6} />} />
-      <Route path="/student/matching" element={<MatchingPage />} />
-      <Route path="/student/roadmap" element={<RoadmapPage />} />
-      <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-      <Route path="/demo" element={<DemoFlowPage />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
+  return <Suspense fallback={<PageFallback />}><Routes>
+    <Route path="/" element={<LandingPage />} />
+    <Route path="/onboarding" element={<OnboardingPage />} />
+    <Route path="/student/home" element={<RoleRoute allowed={["freshman", "junior"]}><StudentHomePage /></RoleRoute>} />
+    <Route path="/student/awakening" element={<RoleRoute allowed={["freshman"]}><AwakeningPage /></RoleRoute>} />
+    <Route path="/student/matching" element={<RoleRoute allowed={["junior"]}><MatchingPage /></RoleRoute>} />
+    <Route path="/student/roadmap" element={<RoleRoute allowed={["freshman", "junior"]}><RoadmapPage /></RoleRoute>} />
+    <Route path="/graduate/navigation" element={<RoleRoute allowed={["graduate"]}><GraduatePage /></RoleRoute>} />
+    <Route path="/teacher/dashboard" element={<AdminDashboardPage />} />
+    <Route path="/admin/dashboard" element={<Navigate replace to="/teacher/dashboard" />} />
+    <Route path="*" element={<NotFoundPage />} />
+  </Routes></Suspense>;
 }

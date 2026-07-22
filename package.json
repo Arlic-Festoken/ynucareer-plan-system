@@ -1,17 +1,24 @@
 {
   "name": "career-navigation-demo",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc -b && vite build",
+    "dev:api": "node server/index.mjs",
+    "typecheck": "tsc -b --pretty false",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:visual": "node scripts/release-visual-audit.mjs",
+    "check:release": "npm run check:server && npm run typecheck && npm run lint && npm run test && npm run test:e2e && npm run test:visual && npm run build && npm run audit",
+    "audit": "npm audit --omit=dev",
+    "check:server": "node --check server/index.mjs && node --check server/coach.mjs",
+    "build": "npm run typecheck && vite build",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^5.1.1",
-    "vite": "^7.2.7",
-    "typescript": "^5.9.3",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-router-dom": "^7.10.1",
@@ -21,8 +28,23 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.58.1",
     "@types/node": "^25.0.2",
     "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3"
+    "@types/react-dom": "^19.2.3",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitejs/plugin-react": "^5.1.1",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "jsdom": "^27.1.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^7.3.6",
+    "vitest": "^4.0.18"
   }
 }
