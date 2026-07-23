@@ -4,7 +4,7 @@ import PageShell from "../components/common/PageShell";
 import TaskList from "../components/common/TaskList";
 import ProgressRail from "../components/product/ProgressRail";
 import { directions, policyConnections, valueOptions } from "../data/catalog";
-import { buildExplorationTasks, recommendDirections } from "../services/recommendation";
+import { buildExplorationTasks, preserveTaskProgress, recommendDirections } from "../services/recommendation";
 import { useCareerStore } from "../store/careerStore";
 
 const steps = ["价值取向", "专业场景", "内在动机", "未来愿景", "方向设计", "行动创造"];
@@ -29,7 +29,7 @@ export default function AwakeningPage() {
   const active = awakening.activeStep;
   const next = () => setAwakening({ activeStep: Math.min(6, active + 1) });
   const previous = () => setAwakening({ activeStep: Math.max(1, active - 1) });
-  const generate = () => selected && setAwakening({ actionTasks: buildExplorationTasks(selected) });
+  const generate = () => selected && setAwakening({ actionTasks: preserveTaskProgress(buildExplorationTasks(selected), awakening.actionTasks) });
   const toggleValue = (value: string) => updateProfile({ values: profile.values.includes(value) ? profile.values.filter((item) => item !== value) : [...profile.values, value] });
 
   return <PageShell eyebrow="低年级探索" title="先回答一个真实的问题，再决定是否走远。" description="六步并不是测评。它们只帮你把兴趣、场景和体验变成可以回看的方向证据。">

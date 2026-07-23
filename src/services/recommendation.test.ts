@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { blankAbilities, jobs } from "../data/catalog";
 import type { CareerProfile } from "../domain";
-import { buildGraduateTimeline, buildPathwayTasks, buildRoadmap, calculateMatch, mapResearchEvidence, recommendDirections } from "./recommendation";
+import { buildGraduateTimeline, buildPathwayTasks, buildRoadmap, calculateMatch, mapResearchEvidence, preserveTaskProgress, recommendDirections } from "./recommendation";
 
 const profile: CareerProfile = {
   id: "test",
@@ -48,5 +48,11 @@ describe("recommendation service", () => {
     const timeline = buildGraduateTimeline("学习分析", "教育科技", []);
     expect(timeline.researchTasks).toHaveLength(3);
     expect(timeline.careerTasks).toHaveLength(3);
+  });
+
+  it("preserves completion and reflection when a plan is regenerated", () => {
+    const previous = [{ id: "old", title: "完成访谈", detail: "旧说明", category: "career", priority: "high", semester: "本学期", completed: true, reflection: "确认了目标方向" }] as const;
+    const next = [{ id: "new", title: "完成访谈", detail: "新说明", category: "career", priority: "high", semester: "本学期", completed: false }] as const;
+    expect(preserveTaskProgress([...next], [...previous])[0]).toMatchObject({ id: "new", detail: "新说明", completed: true, reflection: "确认了目标方向" });
   });
 });

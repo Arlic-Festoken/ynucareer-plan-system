@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { blankAbilities } from "../data/catalog";
-import { useCareerStore } from "./careerStore";
+import { migrateCareerState, useCareerStore } from "./careerStore";
 
 describe("career store", () => {
   it("persists onboarding data in the active state and can reset it", () => {
@@ -20,5 +20,14 @@ describe("career store", () => {
     store.setRoadmapTasks([{ id: "reflection-task", title: "完成访谈", detail: "记录一位从业者的经验", category: "career", priority: "high", semester: "本学期", completed: false }]);
     store.updateRoadmapTask("reflection-task", { completed: true, reflection: "我确认自己更想解决真实业务问题。" });
     expect(useCareerStore.getState().roadmapTasks[0]).toMatchObject({ completed: true, reflection: "我确认自己更想解决真实业务问题。" });
+  });
+
+  it("deeply migrates partial local data without losing required defaults", () => {
+    const migrated = migrateCareerState({ hasOnboarded: true, profile: { major: "通信工程", abilityScores: { programming: 81 } }, awakening: { activeStep: 4 }, research: { focus: "边缘智能" } });
+    expect(migrated.profile.major).toBe("通信工程");
+    expect(migrated.profile.abilityScores.programming).toBe(81);
+    expect(migrated.profile.abilityScores.communication).toBe(blankAbilities.communication);
+    expect(migrated.awakening.motivation.curiosity).toBe(3);
+    expect(migrated.research.careerTasks).toEqual([]);
   });
 });

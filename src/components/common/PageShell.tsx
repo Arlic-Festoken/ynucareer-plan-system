@@ -1,5 +1,5 @@
 import { BarChart3, ClipboardCheck, Compass, FlaskConical, Home, RotateCcw, Sparkles } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { resolveHome, useCareerStore } from "../../store/careerStore";
 
@@ -8,6 +8,10 @@ type PageShellProps = { children: ReactNode; eyebrow?: string; title?: string; d
 const roleLabel = { freshman: "探索阶段", junior: "决策阶段", graduate: "研究生", teacher: "教师端" };
 
 export default function PageShell({ children, eyebrow, title, description, mode }: PageShellProps) {
+  const [storageAvailable] = useState(() => {
+    try { localStorage.setItem("career-storage-check", "1"); localStorage.removeItem("career-storage-check"); return true; }
+    catch { return false; }
+  });
   const hasOnboarded = useCareerStore((state) => state.hasOnboarded);
   const profile = useCareerStore((state) => state.profile);
   const resetDemo = useCareerStore((state) => state.resetDemo);
@@ -29,6 +33,7 @@ export default function PageShell({ children, eyebrow, title, description, mode 
       <nav aria-label="主导航" className="site-nav">{navItems.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to}><Icon size={16} />{label}</NavLink>)}</nav>
       <div className="site-actions">{isTeacher ? <span className="stage-chip">教师端 · 脱敏模拟数据</span> : hasOnboarded && <span className="stage-chip">{roleLabel[profile.role]} · {profile.major}</span>}{hasOnboarded && !isTeacher && <button aria-label="重置本地演示数据" className="icon-button" onClick={resetDemo} title="重置本地演示数据" type="button"><RotateCcw size={16} /></button>}</div>
     </header>
+    {!storageAvailable && <div className="storage-warning" role="alert">当前浏览器阻止本地保存。你仍可浏览，但任务和复盘在刷新后可能丢失。</div>}
     <main id="main-content" className="site-main">
       {(title || description) && <section className="page-intro"><div><span className="section-kicker">{eyebrow}</span>{title && <h1>{title}</h1>}{description && <p>{description}</p>}</div></section>}
       {children}

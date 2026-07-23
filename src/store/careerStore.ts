@@ -40,6 +40,39 @@ type CareerStore = CareerStateData & {
 
 const updateTask = (tasks: ActionTask[], id: string, patch: Partial<ActionTask>) => tasks.map((task) => (task.id === id ? { ...task, ...patch } : task));
 
+export function migrateCareerState(persistedState: unknown): CareerStateData {
+  const persisted = persistedState && typeof persistedState === "object" ? persistedState as Partial<CareerStateData> : {};
+  const persistedProfile: Partial<CareerProfile> = persisted.profile ?? {};
+  const persistedAwakening: Partial<CareerStateData["awakening"]> = persisted.awakening ?? {};
+  const persistedResearch: Partial<CareerStateData["research"]> = persisted.research ?? {};
+  return {
+    ...defaultData,
+    ...persisted,
+    profile: {
+      ...defaultProfile,
+      ...persistedProfile,
+      interests: Array.isArray(persistedProfile.interests) ? persistedProfile.interests : [...defaultProfile.interests],
+      values: Array.isArray(persistedProfile.values) ? persistedProfile.values : [...defaultProfile.values],
+      abilityScores: { ...blankAbilities, ...persistedProfile.abilityScores },
+    },
+    awakening: {
+      ...defaultData.awakening,
+      ...persistedAwakening,
+      motivation: { ...defaultData.awakening.motivation, ...persistedAwakening.motivation },
+      visionTags: Array.isArray(persistedAwakening.visionTags) ? persistedAwakening.visionTags : [],
+      actionTasks: Array.isArray(persistedAwakening.actionTasks) ? persistedAwakening.actionTasks : [],
+    },
+    roadmapTasks: Array.isArray(persisted.roadmapTasks) ? persisted.roadmapTasks : [],
+    research: {
+      ...defaultData.research,
+      ...persistedResearch,
+      outcomes: Array.isArray(persistedResearch.outcomes) ? persistedResearch.outcomes : [],
+      researchTasks: Array.isArray(persistedResearch.researchTasks) ? persistedResearch.researchTasks : [],
+      careerTasks: Array.isArray(persistedResearch.careerTasks) ? persistedResearch.careerTasks : [],
+    },
+  };
+}
+
 export const useCareerStore = create<CareerStore>()(
   persist(
     (set) => ({
@@ -60,7 +93,7 @@ export const useCareerStore = create<CareerStore>()(
     {
       name: "career-navigation-v1",
       version: 1,
-      migrate: (persistedState) => ({ ...defaultData, ...(persistedState as Partial<CareerStore>) }),
+      migrate: (persistedState) => migrateCareerState(persistedState),
     },
   ),
 );

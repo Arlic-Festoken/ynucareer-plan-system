@@ -3,6 +3,13 @@ import { abilityLabels, directions, pathwayGuidance } from "../data/catalog";
 
 const makeId = (prefix: string) => `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 
+export function preserveTaskProgress(nextTasks: ActionTask[], previousTasks: ActionTask[]): ActionTask[] {
+  return nextTasks.map((task) => {
+    const previous = previousTasks.find((item) => item.title === task.title && item.semester === task.semester);
+    return previous ? { ...task, completed: previous.completed, reflection: previous.reflection, evidence: previous.evidence } : task;
+  });
+}
+
 export function recommendDirections(profile: CareerProfile): Direction[] {
   return [...directions]
     .map((direction) => {

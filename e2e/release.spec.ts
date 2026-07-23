@@ -65,9 +65,12 @@ test("core workspaces avoid horizontal overflow on mobile", async ({ page }) => 
 test("job search exposes a clear empty state", async ({ page }) => {
   await onboardHigherGrade(page);
   await page.getByRole("link", { name: "目标诊断" }).click();
+  await page.getByLabel("行业场景").selectOption("教育科技");
+  await expect(page.getByRole("button", { name: /教育科技产品经理/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /AI 应用开发工程师/ })).toHaveCount(0);
   await page.getByPlaceholder("搜索岗位、行业或工作内容").fill("不存在的岗位关键字");
   await expect(page.getByText("没有找到匹配岗位")).toBeVisible();
-  await page.getByRole("button", { name: "清空搜索" }).click();
+  await page.getByRole("button", { name: "清除筛选" }).click();
   await expect(page.getByText("3 个结果")).toBeVisible();
 });
 
@@ -77,4 +80,32 @@ test("teacher workspace keeps teacher navigation after student onboarding", asyn
   await expect(page.getByRole("link", { name: "模拟洞察" })).toBeVisible();
   await expect(page.getByText("教师端 · 脱敏模拟数据")).toBeVisible();
   await expect(page.getByRole("link", { name: "工作台" })).toHaveCount(0);
+});
+
+test("teacher empty filters recover without generating fake advice", async ({ page }) => {
+  await page.goto("/teacher/dashboard");
+  await page.getByLabel("阶段").selectOption("低年级");
+  await page.getByLabel("专业").selectOption("数据科学与大数据技术");
+  await expect(page.getByText("没有符合筛选条件的模拟记录。")).toBeVisible();
+  await expect(page.getByText(/围绕“暂无”/)).toHaveCount(0);
+  await page.getByRole("button", { name: "清除筛选" }).click();
+  await expect(page.getByText("9", { exact: true })).toBeVisible();
+});
+
+test("partial legacy browser data migrates into a usable profile", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("career-navigation-v1", JSON.stringify({
+      version: 0,
+      state: {
+        hasOnboarded: true,
+        profile: { role: "junior", grade: 3, major: "通信工程", abilityScores: { programming: 72 } },
+        awakening: { activeStep: 3 },
+      },
+    }));
+  });
+  await page.goto("/student/home");
+  await expect(page.getByRole("heading", { name: /你好/ })).toBeVisible();
+  await expect(page.getByText(/通信工程/).first()).toBeVisible();
+  await page.getByRole("link", { name: "目标诊断" }).click();
+  await expect(page.getByRole("heading", { name: "选择一个想靠近的岗位" })).toBeVisible();
 });
