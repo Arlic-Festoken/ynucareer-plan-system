@@ -83,7 +83,7 @@ test("teacher can filter the anonymized cohort sample", async ({ page }) => {
 test("mobile landing and onboarding have no horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /不急着决定未来/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /找到方向/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   await page.goto("/onboarding");
   await expect(page.getByRole("heading", { name: /用两分钟/ })).toBeVisible();

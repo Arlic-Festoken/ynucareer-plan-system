@@ -63,6 +63,11 @@ async function resetAndOnboard(roleName) {
 }
 
 await capture("01-landing-desktop", "/");
+await page.setViewportSize({ width: 1024, height: 900 });
+await capture("01a-landing-compact-desktop", "/");
+await page.setViewportSize({ width: 390, height: 844 });
+await capture("01b-landing-mobile", "/");
+await page.setViewportSize({ width: 1440, height: 1000 });
 await page.goto(`${baseURL}/onboarding`, { waitUntil: "networkidle" });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: "networkidle" });

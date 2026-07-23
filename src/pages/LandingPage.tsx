@@ -3,19 +3,38 @@ import { Link } from "react-router-dom";
 import PageShell from "../components/common/PageShell";
 
 const outcomes = [
-  ["01", "从一件小行动开始", "做一件能获得真实反馈的事。"],
-  ["02", "把体验变成证据", "用访谈、作品或复盘更新判断。"],
-  ["03", "需要时再看差距", "对照目标，把差距拆成计划。"],
+  ["01", "方向候选", "结合年级、专业、兴趣与价值，给出值得验证的方向。"],
+  ["02", "能力差距", "对照目标岗位或升学路径，解释最该先补什么。"],
+  ["03", "行动计划", "把结论转成任务，支持完成、复盘和持续调整。"],
 ];
 
 export default function LandingPage() {
   return <PageShell>
     <section className="landing-hero">
-      <div className="landing-copy"><span className="section-kicker"><Sparkles size={15} /> 大学生行动型生涯工具</span><h1>不急着决定未来。<br /><em>先做下一件值得做的事。</em></h1><p>把下一步变成可执行、可复盘的行动。</p><div className="hero-actions"><Link className="button button-primary" to="/onboarding">开始建立我的计划 <ArrowRight size={18} /></Link><a className="button button-quiet" href="#how-it-works">看看怎么运作</a></div><div className="privacy-inline"><ShieldCheck size={17} /> 无需登录 · 仅存本机 · 可随时重置</div></div>
-      <aside className="hero-signal" aria-label="行动计划预览"><div className="signal-topline"><span>THIS WEEK / 01</span><i>计划正常</i></div><div className="signal-hero"><span>今天的下一步</span><strong>去完成一次<br />真实访谈。</strong><p>和从业者聊 30 分钟，验证方向。</p></div><div className="signal-task"><span><Check size={15} /></span><div><strong>准备三个访谈问题</strong><small>预计 10 分钟 · 已完成</small></div></div><div className="signal-task"><span><CircleDot size={15} /></span><div><strong>联系一位数据分析从业者</strong><small>预计 15 分钟 · 进行中</small></div></div><div className="signal-footer"><span>完成后获得</span><strong>方向证据 + 下一步建议</strong></div></aside>
+      <div className="landing-copy">
+        <span className="section-kicker"><Sparkles size={15} /> 云南大学 · 生涯发展导航</span>
+        <h1><span>找到方向，</span><strong>看清差距，完成行动。</strong></h1>
+        <p>按你的年级和目标，生成方向探索、岗位匹配与成长任务。</p>
+        <div className="hero-actions"><Link className="button button-primary" to="/onboarding">生成我的行动计划 <ArrowRight size={18} /></Link><a className="button button-quiet" href="#how-it-works">查看适用阶段</a></div>
+        <div className="privacy-inline"><ShieldCheck size={17} /> 无需登录 · 数据仅存当前浏览器</div>
+      </div>
+      <aside className="hero-signal" aria-label="行动计划预览">
+        <div className="signal-topline"><span>PERSONAL PLAN / 01</span><i>本地生成</i></div>
+        <div className="signal-profile"><span>高年级 · 就业准备</span><strong>数据分析方向</strong></div>
+        <div className="signal-hero"><span>当前优先行动</span><strong>完成一次真实<br />岗位访谈</strong><p>验证岗位日常、能力要求和你的兴趣是否匹配。</p></div>
+        <div className="signal-task"><span><Check size={15} /></span><div><strong>准备 3 个访谈问题</strong><small>10 分钟 · 已完成</small></div></div>
+        <div className="signal-task"><span><CircleDot size={15} /></span><div><strong>联系 1 位相关从业者</strong><small>15 分钟 · 待进行</small></div></div>
+        <div className="signal-footer"><span>完成后更新</span><strong>方向证据 · 能力差距 · 下一步</strong></div>
+      </aside>
     </section>
-    <section className="landing-proof"><div><span className="section-kicker">它解决什么</span><h2>你不缺信息。<br />你缺的是一条能开始的路径。</h2></div><div className="proof-grid">{outcomes.map(([number, title, detail]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{detail}</p></article>)}</div></section>
-    <section className="role-paths" id="how-it-works"><div className="role-path-copy"><span className="section-kicker">按阶段工作</span><h2>不同阶段，<br />只做当下最重要的事。</h2><p>低年级探索，高年级对照目标，研究生双线推进。</p></div><div className="role-path-list"><Link to="/onboarding"><span>01</span><div><strong>低年级：找到值得验证的方向</strong><small>价值、兴趣、场景、行动、反思</small></div><ArrowRight size={18} /></Link><Link to="/onboarding"><span>02</span><div><strong>高年级：看清目标与能力差距</strong><small>岗位参照、解释、路线图、证据</small></div><ArrowRight size={18} /></Link><Link to="/onboarding"><span>03</span><div><strong>研究生：让成果走向场景</strong><small>成果映射、科研线、职业线</small></div><ArrowRight size={18} /></Link></div></section>
-    <section className="teacher-callout"><Compass size={24} /><div><span className="section-kicker">教师与指导者</span><h2>从模拟群体信号中识别资源缺口。</h2></div><Link className="button button-secondary" to="/teacher/dashboard">打开教师模拟洞察 <ArrowRight size={16} /></Link></section>
+    <section className="landing-proof">
+      <div className="landing-section-head"><div><span className="section-kicker">进入系统后</span><h2>得到结果，不是再做一份测评。</h2></div><p>每个结论都对应一个可执行的下一步。</p></div>
+      <div className="proof-grid">{outcomes.map(([number, title, detail]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{detail}</p></article>)}</div>
+    </section>
+    <section className="role-paths" id="how-it-works">
+      <div className="role-path-copy"><span className="section-kicker">选择当前阶段</span><h2>按阶段进入对应工作流。</h2><p>只呈现与你现在有关的任务。</p></div>
+      <div className="role-path-list"><Link to="/onboarding"><span>01</span><div><strong>低年级 · 探索方向</strong><small>价值与兴趣 → 场景 → 真实行动</small></div><ArrowRight size={18} /></Link><Link to="/onboarding"><span>02</span><div><strong>高年级 · 路径决策</strong><small>岗位或升学目标 → 差距 → 路线图</small></div><ArrowRight size={18} /></Link><Link to="/onboarding"><span>03</span><div><strong>研究生 · 双线导航</strong><small>科研成果 → 能力证据 → 职业准备</small></div><ArrowRight size={18} /></Link></div>
+    </section>
+    <section className="teacher-callout"><Compass size={24} /><div><span className="section-kicker">教师与指导者</span><h2>查看脱敏模拟群体的阶段、短板与资源需求。</h2></div><Link className="button button-secondary" to="/teacher/dashboard">进入教师端 <ArrowRight size={16} /></Link></section>
   </PageShell>;
 }
