@@ -26,7 +26,7 @@ export default function ActionFocusCard({ task, title, description, to, cta, com
       <span className="signal-label">本阶段进度</span>
       <strong>{total ? `${completed}/${total}` : "01"}</strong>
       <div className="signal-progress" aria-label={`本阶段完成 ${progress}%`}><i style={{ width: `${progress}%` }} /></div>
-      <p>{task?.completed ? <><CheckCircle2 size={16} /> 已完成，下一步写下收获</> : "完成后，它会成为下一次选择的证据。"}</p>
+      <p>{task?.completed ? <><CheckCircle2 size={16} /> 已完成，记下收获。</> : "完成后留下方向证据。"}</p>
     </aside>
   </section>;
 }

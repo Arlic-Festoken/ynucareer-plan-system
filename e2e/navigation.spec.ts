@@ -8,7 +8,7 @@ test("low-grade student completes an exploration action", async ({ page }) => {
   await page.getByRole("button", { name: "继续" }).click();
   await page.getByRole("button", { name: "生成我的行动计划" }).click();
   await expect(page.getByRole("heading", { name: /你好/ })).toBeVisible();
-  await expect(page.getByText("AI 服务尚未配置。规则建议和行动计划仍可正常使用。")).toBeVisible();
+  await expect(page.getByText("AI 未配置，规则计划可用。")).toBeVisible();
   await page.getByRole("link", { name: "开始生成建议" }).click();
   await expect(page.getByRole("heading", { name: "先回答一个真实的问题，再决定是否走远。" })).toBeVisible();
   await page.getByRole("button", { name: "方向设计" }).click();
@@ -75,7 +75,7 @@ test("graduate can build dual-lane planning", async ({ page }) => {
 
 test("teacher can filter the anonymized cohort sample", async ({ page }) => {
   await page.goto("/teacher/dashboard");
-  await expect(page.getByText("不读取浏览器里的个人画像，也不展示任何可识别的学生记录。")).toBeVisible();
+  await expect(page.getByText("不读取个人画像，不展示可识别记录。")).toBeVisible();
   await page.getByLabel("阶段").selectOption("研究生");
   await expect(page.getByText("模拟样本", { exact: true })).toBeVisible();
 });
