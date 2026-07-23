@@ -1,5 +1,13 @@
 import http from "node:http";
 import { buildCoachRequest, parseCoachResponse, sanitizeCoachInput } from "./coach.mjs";
+import {
+  buildActionPlanRequest,
+  buildDirectionRequest,
+  parseActionPlanResponse,
+  parseDirectionResponse,
+  sanitizeDirectionInput,
+  sanitizePlanInput,
+} from "./planner.mjs";
 
 const port = Number(process.env.PORT || 8787);
 const host = process.env.HOST || "0.0.0.0";
@@ -44,18 +52,17 @@ function readJson(request) {
   });
 }
 
-async function getAdvice(payload) {
+async function requestDeepSeek(providerRequest, parser) {
   if (!apiKey) {
     const error = new Error("ai_not_configured");
     error.status = 503;
     throw error;
   }
-  const request = buildCoachRequest(sanitizeCoachInput(payload), model);
   const upstream = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify(request),
-    signal: AbortSignal.timeout(25_000),
+    body: JSON.stringify(providerRequest),
+    signal: AbortSignal.timeout(40_000),
   });
   if (!upstream.ok) {
     const error = new Error(upstream.status === 401 ? "provider_credential_error" : "provider_unavailable");
@@ -63,28 +70,63 @@ async function getAdvice(payload) {
     throw error;
   }
   const response = await upstream.json();
-  return parseCoachResponse(response?.choices?.[0]?.message?.content);
+  return parser(response?.choices?.[0]?.message?.content);
+}
+
+async function getAdvice(payload) {
+  return requestDeepSeek(buildCoachRequest(sanitizeCoachInput(payload), model), parseCoachResponse);
+}
+
+async function getDirections(payload) {
+  return requestDeepSeek(buildDirectionRequest(sanitizeDirectionInput(payload), model), parseDirectionResponse);
+}
+
+async function getActionPlan(payload) {
+  return requestDeepSeek(buildActionPlanRequest(sanitizePlanInput(payload), model), parseActionPlanResponse);
+}
+
+function errorResponse(error) {
+  const code = error instanceof Error ? error.message : "provider_unavailable";
+  const badRequest = ["body_too_large", "invalid_json", "direction_required"].includes(code);
+  const status = typeof error?.status === "number" ? error.status : badRequest ? 400 : 503;
+  const message = code === "ai_not_configured"
+    ? "AI 服务尚未配置；本地规则建议仍可使用。"
+    : code === "direction_required"
+      ? "请先选择一个方向候选。"
+      : "AI 服务暂时不可用，请稍后重试。";
+  return { status, body: { error: code, message } };
 }
 
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || "/", "http://localhost");
   if (request.method === "GET" && url.pathname === "/healthz") {
-    return sendJson(response, 200, { status: "ok", provider: "deepseek", model, ai: apiKey ? "ready" : "not_configured" });
+    return sendJson(response, 200, {
+      status: "ok",
+      provider: "deepseek",
+      model,
+      ai: apiKey ? "ready" : "not_configured",
+      capabilities: ["coach", "direction-candidates", "personalized-action-plan"],
+    });
   }
-  // Public callers use /api/coach. Both the Vite dev proxy and Nginx strip
+  // Public callers use /api/*. Both the Vite dev proxy and Nginx strip
   // that public prefix before forwarding to this internal-only service.
-  if (request.method === "POST" && url.pathname === "/coach") {
+  const handlers = {
+    "/coach": { key: "advice", run: getAdvice },
+    "/planning/directions": { key: "result", run: getDirections },
+    "/planning/actions": { key: "result", run: getActionPlan },
+  };
+  const handler = handlers[url.pathname];
+  if (request.method === "POST" && handler) {
     const forwarded = String(request.headers["x-forwarded-for"] || "").split(",")[0].trim();
     const clientIp = forwarded || request.socket.remoteAddress || "unknown";
     if (!allowed(clientIp)) return sendJson(response, 429, { error: "rate_limited", message: "请稍后再试。" });
     if (!String(request.headers["content-type"] || "").includes("application/json")) return sendJson(response, 415, { error: "json_required" });
     try {
-      const advice = await getAdvice(await readJson(request));
-      return sendJson(response, 200, { advice });
+      const result = await handler.run(await readJson(request));
+      return sendJson(response, 200, { [handler.key]: result, meta: { provider: "deepseek", model, generatedAt: new Date().toISOString() } });
     } catch (error) {
-      const code = error instanceof Error ? error.message : "provider_unavailable";
-      const status = typeof error?.status === "number" ? error.status : code === "body_too_large" || code === "invalid_json" ? 400 : 503;
-      return sendJson(response, status, { error: code, message: code === "ai_not_configured" ? "AI 服务尚未配置；本地规则建议仍可使用。" : "AI 服务暂时不可用，请稍后重试。" });
+      const failure = errorResponse(error);
+      return sendJson(response, failure.status, failure.body);
     }
   }
   return sendJson(response, 404, { error: "not_found" });

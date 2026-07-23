@@ -4,25 +4,26 @@ import type { ActionTask } from "../../domain";
 
 type TaskListProps = {
   tasks: ActionTask[];
-  onToggle: (task: ActionTask) => void;
+  onToggle?: (task: ActionTask) => void;
   onSaveReflection?: (task: ActionTask, reflection: string) => void;
   emptyMessage?: string;
+  readOnly?: boolean;
 };
 
 const categoryLabels: Record<ActionTask["category"], string> = {
   course: "课程", project: "项目", practice: "实践", reflection: "反思", research: "科研", career: "生涯",
 };
 
-export default function TaskList({ tasks, onToggle, onSaveReflection, emptyMessage = "暂未生成任务。" }: TaskListProps) {
+export default function TaskList({ tasks, onToggle, onSaveReflection, emptyMessage = "暂未生成任务。", readOnly = false }: TaskListProps) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   if (!tasks.length) return <p className="empty-state">{emptyMessage}</p>;
 
   return <div className="task-list">
     {tasks.map((task) => <article className={`task-row ${task.completed ? "is-complete" : ""}`} key={task.id}>
-      <button aria-label={task.completed ? `标记未完成：${task.title}` : `完成：${task.title}`} className="task-toggle" onClick={() => onToggle(task)} type="button">
+      {readOnly ? <span aria-hidden="true" className="task-toggle"><Circle size={21} /></span> : <button aria-label={task.completed ? `标记未完成：${task.title}` : `完成：${task.title}`} className="task-toggle" onClick={() => onToggle?.(task)} type="button">
         {task.completed ? <CheckCircle2 aria-hidden="true" size={21} /> : <Circle aria-hidden="true" size={21} />}
-      </button>
+      </button>}
       <div className="task-row-copy">
         <span className="task-row-meta">{task.semester} · {categoryLabels[task.category]} · {task.priority === "high" ? "优先完成" : task.priority === "medium" ? "持续推进" : "保持关注"}</span>
         <strong>{task.title}</strong><small>{task.detail}</small>

@@ -1,4 +1,4 @@
-import { BarChart3, ClipboardCheck, Compass, FlaskConical, Home, RotateCcw, Sparkles } from "lucide-react";
+import { BarChart3, Bot, ClipboardCheck, Compass, FlaskConical, Home, RotateCcw, Sparkles } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { resolveHome, useCareerStore } from "../../store/careerStore";
@@ -23,7 +23,7 @@ export default function PageShell({ children, eyebrow, title, description, mode 
     ? [{ to: "/graduate/navigation", label: "双线计划", icon: FlaskConical }, { to: "/onboarding", label: "调整画像", icon: Sparkles }]
     : profile.role === "teacher"
       ? [{ to: "/teacher/dashboard", label: "模拟洞察", icon: BarChart3 }]
-      : [{ to: studentHome, label: "工作台", icon: Compass }, { to: profile.grade <= 2 ? "/student/awakening" : "/student/matching", label: profile.grade <= 2 ? "探索方向" : "目标诊断", icon: Sparkles }, { to: "/student/roadmap", label: "行动计划", icon: ClipboardCheck }];
+      : [{ to: studentHome, label: "工作台", icon: Compass }, { to: profile.grade <= 2 ? "/student/awakening" : "/student/matching", label: profile.grade <= 2 ? "探索方向" : "目标诊断", icon: Sparkles }, { to: "/student/ai-planning", label: "AI 规划", icon: Bot }, { to: "/student/roadmap", label: "行动计划", icon: ClipboardCheck }];
   const navItems = isTeacher || hasOnboarded ? privateNav : [{ to: "/", label: "首页", icon: Home }, { to: "/teacher/dashboard", label: "教师入口", icon: BarChart3 }];
 
   return <div className="site-shell">

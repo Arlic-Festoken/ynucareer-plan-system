@@ -89,6 +89,7 @@ await page.setViewportSize({ width: 1440, height: 1000 });
 
 await resetAndOnboard("高年级学生");
 await capture("08-student-home-desktop", "/student/home");
+await capture("08a-ai-planning-desktop", "/student/ai-planning");
 await capture("09-matching-desktop", "/student/matching");
 await capture("10-teacher-desktop", "/teacher/dashboard");
 
@@ -103,6 +104,7 @@ await capture("12-graduate-mobile", "/graduate/navigation");
 await resetAndOnboard("高年级学生");
 await capture("13-student-home-mobile", "/student/home");
 await capture("14-matching-mobile", "/student/matching");
+await capture("14a-ai-planning-mobile", "/student/ai-planning");
 await capture("15-teacher-mobile", "/teacher/dashboard");
 
 await browser.close();

@@ -29,5 +29,13 @@ describe("career store", () => {
     expect(migrated.profile.abilityScores.communication).toBe(blankAbilities.communication);
     expect(migrated.awakening.motivation.curiosity).toBe(3);
     expect(migrated.research.careerTasks).toEqual([]);
+    expect(migrated.aiPlanning).toMatchObject({ timeBudgetHours: 6, horizonWeeks: 8, directionResult: null });
+  });
+
+  it("persists AI planning choices and clears them with demo reset", () => {
+    useCareerStore.getState().setAiPlanning({ preferredScenes: ["教育科技"], selectedCandidateId: "ai-direction-1", timeBudgetHours: 8 });
+    expect(useCareerStore.getState().aiPlanning).toMatchObject({ preferredScenes: ["教育科技"], selectedCandidateId: "ai-direction-1", timeBudgetHours: 8 });
+    useCareerStore.getState().resetDemo();
+    expect(useCareerStore.getState().aiPlanning).toMatchObject({ preferredScenes: [], selectedCandidateId: null, timeBudgetHours: 6 });
   });
 });

@@ -21,6 +21,17 @@ const defaultData: CareerStateData = {
   selectedJobId: "data-analyst",
   roadmapTasks: [],
   research: { focus: "", industry: "", outcomes: [], researchTasks: [], careerTasks: [] },
+  aiPlanning: {
+    preferredScenes: [],
+    strengthEvidence: "",
+    constraints: "",
+    timeBudgetHours: 6,
+    horizonWeeks: 8,
+    directionResult: null,
+    selectedCandidateId: null,
+    actionPlan: null,
+    generatedAt: null,
+  },
 };
 
 type CareerStore = CareerStateData & {
@@ -32,6 +43,7 @@ type CareerStore = CareerStateData & {
   updateRoadmapTask: (id: string, patch: Partial<ActionTask>) => void;
   addRoadmapTask: (task: ActionTask) => void;
   setResearch: (patch: Partial<CareerStateData["research"]>) => void;
+  setAiPlanning: (patch: Partial<CareerStateData["aiPlanning"]>) => void;
   addResearchOutcome: (outcome: ResearchOutcome) => void;
   removeResearchOutcome: (id: string) => void;
   updateResearchTask: (lane: "researchTasks" | "careerTasks", id: string, patch: Partial<ActionTask>) => void;
@@ -45,6 +57,7 @@ export function migrateCareerState(persistedState: unknown): CareerStateData {
   const persistedProfile: Partial<CareerProfile> = persisted.profile ?? {};
   const persistedAwakening: Partial<CareerStateData["awakening"]> = persisted.awakening ?? {};
   const persistedResearch: Partial<CareerStateData["research"]> = persisted.research ?? {};
+  const persistedAiPlanning: Partial<CareerStateData["aiPlanning"]> = persisted.aiPlanning ?? {};
   return {
     ...defaultData,
     ...persisted,
@@ -70,6 +83,17 @@ export function migrateCareerState(persistedState: unknown): CareerStateData {
       researchTasks: Array.isArray(persistedResearch.researchTasks) ? persistedResearch.researchTasks : [],
       careerTasks: Array.isArray(persistedResearch.careerTasks) ? persistedResearch.careerTasks : [],
     },
+    aiPlanning: {
+      ...defaultData.aiPlanning,
+      ...persistedAiPlanning,
+      preferredScenes: Array.isArray(persistedAiPlanning.preferredScenes) ? persistedAiPlanning.preferredScenes : [],
+      directionResult: persistedAiPlanning.directionResult && Array.isArray(persistedAiPlanning.directionResult.candidates)
+        ? persistedAiPlanning.directionResult
+        : null,
+      actionPlan: persistedAiPlanning.actionPlan && Array.isArray(persistedAiPlanning.actionPlan.tasks)
+        ? persistedAiPlanning.actionPlan
+        : null,
+    },
   };
 }
 
@@ -85,6 +109,7 @@ export const useCareerStore = create<CareerStore>()(
       updateRoadmapTask: (id, patch) => set((state) => ({ roadmapTasks: updateTask(state.roadmapTasks, id, patch) })),
       addRoadmapTask: (task) => set((state) => ({ roadmapTasks: [...state.roadmapTasks, task] })),
       setResearch: (patch) => set((state) => ({ research: { ...state.research, ...patch } })),
+      setAiPlanning: (patch) => set((state) => ({ aiPlanning: { ...state.aiPlanning, ...patch } })),
       addResearchOutcome: (outcome) => set((state) => ({ research: { ...state.research, outcomes: [...state.research.outcomes, outcome] } })),
       removeResearchOutcome: (id) => set((state) => ({ research: { ...state.research, outcomes: state.research.outcomes.filter((outcome) => outcome.id !== id) } })),
       updateResearchTask: (lane, id, patch) => set((state) => ({ research: { ...state.research, [lane]: updateTask(state.research[lane], id, patch) } })),
@@ -92,7 +117,7 @@ export const useCareerStore = create<CareerStore>()(
     }),
     {
       name: "career-navigation-v1",
-      version: 1,
+      version: 2,
       migrate: (persistedState) => migrateCareerState(persistedState),
     },
   ),

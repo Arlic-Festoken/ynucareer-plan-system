@@ -7,6 +7,7 @@ const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const StudentHomePage = lazy(() => import("./pages/StudentHomePage"));
 const AwakeningPage = lazy(() => import("./pages/AwakeningPage"));
 const MatchingPage = lazy(() => import("./pages/MatchingPage"));
+const AiPlanningPage = lazy(() => import("./pages/AiPlanningPage"));
 const RoadmapPage = lazy(() => import("./pages/RoadmapPage"));
 const GraduatePage = lazy(() => import("./pages/GraduatePage"));
 const AdminDashboardPage = lazy(() => import("./pages/AdminDashboardPage"));
@@ -21,6 +22,7 @@ export default function App() {
     <Route path="/student/home" element={<RoleRoute allowed={["freshman", "junior"]}><StudentHomePage /></RoleRoute>} />
     <Route path="/student/awakening" element={<RoleRoute allowed={["freshman"]}><AwakeningPage /></RoleRoute>} />
     <Route path="/student/matching" element={<RoleRoute allowed={["junior"]}><MatchingPage /></RoleRoute>} />
+    <Route path="/student/ai-planning" element={<RoleRoute allowed={["freshman", "junior"]}><AiPlanningPage /></RoleRoute>} />
     <Route path="/student/roadmap" element={<RoleRoute allowed={["freshman", "junior"]}><RoadmapPage /></RoleRoute>} />
     <Route path="/graduate/navigation" element={<RoleRoute allowed={["graduate"]}><GraduatePage /></RoleRoute>} />
     <Route path="/teacher/dashboard" element={<AdminDashboardPage />} />

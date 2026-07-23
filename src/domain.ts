@@ -98,6 +98,56 @@ export type AwakeningState = {
   reflection: string;
 };
 
+export type AiDirectionCandidate = {
+  id: string;
+  title: string;
+  specialization: string;
+  fit: "优先验证" | "值得比较" | "探索备选";
+  rationale: string;
+  problemExamples: string[];
+  evidenceNeeded: string[];
+  tradeoffs: string;
+  firstExperiment: {
+    title: string;
+    detail: string;
+    successSignal: string;
+  };
+};
+
+export type AiDirectionResult = {
+  overview: string;
+  candidates: AiDirectionCandidate[];
+  reflectionQuestion: string;
+};
+
+export type AiActionPlan = {
+  directionTitle: string;
+  objective: string;
+  strategy: string;
+  tasks: Array<{
+    title: string;
+    detail: string;
+    week: string;
+    evidence: string;
+    priority: ActionTask["priority"];
+    category: ActionTask["category"];
+  }>;
+  checkpoints: Array<{ week: string; question: string }>;
+  risks: string[];
+};
+
+export type AiPlanningState = {
+  preferredScenes: string[];
+  strengthEvidence: string;
+  constraints: string;
+  timeBudgetHours: number;
+  horizonWeeks: number;
+  directionResult: AiDirectionResult | null;
+  selectedCandidateId: string | null;
+  actionPlan: AiActionPlan | null;
+  generatedAt: string | null;
+};
+
 export type CareerStateData = {
   hasOnboarded: boolean;
   profile: CareerProfile;
@@ -105,4 +155,5 @@ export type CareerStateData = {
   selectedJobId: string;
   roadmapTasks: ActionTask[];
   research: ResearchState;
+  aiPlanning: AiPlanningState;
 };
