@@ -1,5 +1,10 @@
 import http from "node:http";
+import { resolve } from "node:path";
+import { createAccountService } from "./account-service.mjs";
+import { handleAccountRequest } from "./account-http.mjs";
 import { buildCoachRequest, parseCoachResponse, sanitizeCoachInput } from "./coach.mjs";
+import { createDatabase } from "./database.mjs";
+import { createRateLimiter } from "./rate-limit.mjs";
 import {
   buildActionPlanRequest,
   buildDirectionRequest,
@@ -14,31 +19,38 @@ const host = process.env.HOST || "0.0.0.0";
 const apiKey = process.env.DEEPSEEK_API_KEY?.trim() || "";
 const model = ["deepseek-v4-flash", "deepseek-v4-pro"].includes(process.env.DEEPSEEK_MODEL) ? process.env.DEEPSEEK_MODEL : "deepseek-v4-flash";
 const baseUrl = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
-const requests = new Map();
-const windowMs = 60_000;
-const limitPerWindow = 12;
+const databasePath = process.env.DATABASE_PATH || resolve("data", "career.db");
+const database = createDatabase(databasePath);
+const accountService = createAccountService(database);
+const aiRateLimiter = createRateLimiter({ limit: 12, windowMs: 60_000 });
+const authRateLimiter = createRateLimiter({ limit: 30, windowMs: 10 * 60_000 });
 
-function sendJson(response, status, body) {
-  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+function sendJson(response, status, body, extraHeaders = {}) {
+  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", ...extraHeaders });
   response.end(JSON.stringify(body));
 }
 
-function allowed(clientIp) {
-  const now = Date.now();
-  const current = (requests.get(clientIp) || []).filter((time) => now - time < windowMs);
-  if (current.length >= limitPerWindow) return false;
-  current.push(now);
-  requests.set(clientIp, current);
-  return true;
+function clientAddress(request) {
+  const forwarded = String(request.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return forwarded || request.socket.remoteAddress || "unknown";
 }
 
-function readJson(request) {
+function rateLimited(response, result) {
+  return sendJson(
+    response,
+    429,
+    { error: "rate_limited", message: "尝试次数过多，请稍后再试。" },
+    { "Retry-After": String(result.retryAfterSeconds) },
+  );
+}
+
+function readJson(request, maxSize = 32_000) {
   return new Promise((resolve, reject) => {
     let size = 0;
     let raw = "";
     request.on("data", (chunk) => {
       size += chunk.length;
-      if (size > 32_000) {
+      if (size > maxSize) {
         reject(new Error("body_too_large"));
         request.destroy();
         return;
@@ -105,8 +117,32 @@ const server = http.createServer(async (request, response) => {
       provider: "deepseek",
       model,
       ai: apiKey ? "ready" : "not_configured",
-      capabilities: ["coach", "direction-candidates", "personalized-action-plan"],
+      database: "ready",
+      capabilities: ["accounts", "profiles", "career-state-sync", "coach", "direction-candidates", "personalized-action-plan"],
     });
+  }
+  if (url.pathname.startsWith("/auth/") || url.pathname.startsWith("/me/")) {
+    try {
+      if (request.method === "POST" && ["/auth/register", "/auth/login"].includes(url.pathname)) {
+        const limitResult = authRateLimiter.consume(clientAddress(request));
+        if (!limitResult.allowed) return rateLimited(response, limitResult);
+      }
+      const hasBody = ["POST", "PUT", "PATCH"].includes(request.method || "");
+      const body = hasBody ? await readJson(request, 160_000) : undefined;
+      const forwardedProto = String(request.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+      const result = await handleAccountRequest({
+        method: request.method || "GET",
+        path: url.pathname,
+        headers: request.headers,
+        body,
+        secure: process.env.COOKIE_SECURE === "true" || forwardedProto === "https",
+      }, accountService);
+      if (result.handled) return sendJson(response, result.status, result.body, result.headers);
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "invalid_request";
+      const status = ["body_too_large", "invalid_json"].includes(code) ? 400 : 500;
+      return sendJson(response, status, { error: code, message: status === 400 ? "请求数据格式不正确。" : "服务暂时不可用。" });
+    }
   }
   // Public callers use /api/*. Both the Vite dev proxy and Nginx strip
   // that public prefix before forwarding to this internal-only service.
@@ -117,9 +153,8 @@ const server = http.createServer(async (request, response) => {
   };
   const handler = handlers[url.pathname];
   if (request.method === "POST" && handler) {
-    const forwarded = String(request.headers["x-forwarded-for"] || "").split(",")[0].trim();
-    const clientIp = forwarded || request.socket.remoteAddress || "unknown";
-    if (!allowed(clientIp)) return sendJson(response, 429, { error: "rate_limited", message: "请稍后再试。" });
+    const limitResult = aiRateLimiter.consume(clientAddress(request));
+    if (!limitResult.allowed) return rateLimited(response, limitResult);
     if (!String(request.headers["content-type"] || "").includes("application/json")) return sendJson(response, 415, { error: "json_required" });
     try {
       const result = await handler.run(await readJson(request));

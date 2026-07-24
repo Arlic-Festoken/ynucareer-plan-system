@@ -1,12 +1,8 @@
 import { expect, test } from "@playwright/test";
-
-test.beforeEach(async ({ page }) => { await page.goto("/"); await page.evaluate(() => window.localStorage.clear()); });
+import { onboardRole, registerAndOpenOnboarding } from "./helpers";
 
 test("low-grade student completes an exploration action", async ({ page }) => {
-  await page.goto("/onboarding");
-  await page.getByRole("radio", { name: "低年级学生" }).check();
-  await page.getByRole("button", { name: "继续" }).click();
-  await page.getByRole("button", { name: "生成我的行动计划" }).click();
+  await onboardRole(page, "低年级学生");
   await expect(page.getByRole("heading", { name: /你好/ })).toBeVisible();
   await expect(page.getByText("AI 未配置，规则计划可用。")).toBeVisible();
   await page.getByRole("link", { name: "开始生成建议" }).click();
@@ -30,10 +26,7 @@ test("low-grade student completes an exploration action", async ({ page }) => {
 });
 
 test("higher-grade student completes and reflects on a persisted action", async ({ page }) => {
-  await page.goto("/onboarding");
-  await page.getByRole("radio", { name: "高年级学生" }).check();
-  await page.getByRole("button", { name: "继续" }).click();
-  await page.getByRole("button", { name: "生成我的行动计划" }).click();
+  await onboardRole(page, "高年级学生");
   await page.getByRole("link", { name: "开始生成建议" }).click();
   await expect(page.getByRole("heading", { name: "选择一个想靠近的岗位" })).toBeVisible();
   await page.getByPlaceholder("搜索岗位、行业或工作内容").fill("教育");
@@ -60,10 +53,7 @@ test("higher-grade student completes and reflects on a persisted action", async 
 });
 
 test("graduate can build dual-lane planning", async ({ page }) => {
-  await page.goto("/onboarding");
-  await page.getByRole("radio", { name: "研究生" }).check();
-  await page.getByRole("button", { name: "继续" }).click();
-  await page.getByRole("button", { name: "生成我的行动计划" }).click();
+  await onboardRole(page, "研究生");
   await page.getByRole("button", { name: "生成我的双线计划" }).click();
   await expect(page.getByRole("alert")).toContainText("请先填写研究方向和希望靠近的产业或场景");
   await page.getByLabel("研究方向").fill("学习分析");
@@ -85,7 +75,7 @@ test("mobile landing and onboarding have no horizontal overflow", async ({ page 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /找到方向/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
-  await page.goto("/onboarding");
+  await registerAndOpenOnboarding(page);
   await expect(page.getByRole("heading", { name: /用两分钟/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 });

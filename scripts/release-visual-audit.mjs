@@ -38,8 +38,14 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
 const errors = [];
 const results = [];
+let accountSequence = 0;
 page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
-page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
+page.on("console", (message) => {
+  if (message.type() !== "error") return;
+  const sourceUrl = message.location().url || "";
+  const expectedGuestSession = message.text().includes("401 (Unauthorized)") && sourceUrl.includes("/api/auth/session");
+  if (!expectedGuestSession) errors.push(`console: ${message.text()}${sourceUrl ? ` @ ${sourceUrl}` : ""}`);
+});
 
 async function capture(name, path) {
   await page.goto(`${baseURL}${path}`, { waitUntil: "networkidle" });
@@ -53,10 +59,23 @@ async function capture(name, path) {
   results.push({ name, ...metrics, overflow: metrics.scrollWidth > metrics.width });
 }
 
+async function registerAuditAccount() {
+  accountSequence += 1;
+  const response = await page.context().request.post(`${baseURL}/api/auth/register`, {
+    data: {
+      email: `visual-${Date.now()}-${accountSequence}@example.edu.cn`,
+      password: "career-plan-2026",
+      displayName: "视觉验收同学",
+    },
+  });
+  if (response.status() !== 201) throw new Error(`Audit account registration failed: ${response.status()}`);
+}
+
 async function resetAndOnboard(roleName) {
-  await page.goto(`${baseURL}/onboarding`, { waitUntil: "networkidle" });
+  await page.goto(baseURL, { waitUntil: "networkidle" });
   await page.evaluate(() => localStorage.clear());
-  await page.reload({ waitUntil: "networkidle" });
+  await registerAuditAccount();
+  await page.goto(`${baseURL}/onboarding`, { waitUntil: "networkidle" });
   await page.getByRole("radio", { name: roleName }).check();
   await page.getByRole("button", { name: "继续" }).click();
   await page.getByRole("button", { name: "生成我的行动计划" }).click();
@@ -67,12 +86,13 @@ await page.setViewportSize({ width: 1024, height: 900 });
 await capture("01a-landing-compact-desktop", "/");
 await page.setViewportSize({ width: 390, height: 844 });
 await capture("01b-landing-mobile", "/");
+await capture("02-register-mobile", "/register");
 await page.setViewportSize({ width: 1440, height: 1000 });
-await page.goto(`${baseURL}/onboarding`, { waitUntil: "networkidle" });
+await capture("02a-login-desktop", "/login");
+await page.goto(baseURL, { waitUntil: "networkidle" });
 await page.evaluate(() => localStorage.clear());
-await page.reload({ waitUntil: "networkidle" });
-await page.screenshot({ path: resolve(outputDir, "02-onboarding-desktop.png"), fullPage: true });
-results.push({ name: "02-onboarding-desktop", path: "/onboarding", width: 1440, scrollWidth: await page.evaluate(() => document.documentElement.scrollWidth), title: await page.title(), overflow: await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth) });
+await registerAuditAccount();
+await capture("02b-onboarding-desktop", "/onboarding");
 
 await resetAndOnboard("低年级学生");
 await capture("03-explorer-home-desktop", "/student/home");
@@ -89,6 +109,7 @@ await page.setViewportSize({ width: 1440, height: 1000 });
 
 await resetAndOnboard("高年级学生");
 await capture("08-student-home-desktop", "/student/home");
+await capture("08a-profile-desktop", "/account/profile");
 await capture("08a-ai-planning-desktop", "/student/ai-planning");
 await capture("09-matching-desktop", "/student/matching");
 await capture("10-teacher-desktop", "/teacher/dashboard");
@@ -103,6 +124,7 @@ await capture("12-graduate-mobile", "/graduate/navigation");
 
 await resetAndOnboard("高年级学生");
 await capture("13-student-home-mobile", "/student/home");
+await capture("13a-profile-mobile", "/account/profile");
 await capture("14-matching-mobile", "/student/matching");
 await capture("14a-ai-planning-mobile", "/student/ai-planning");
 await capture("15-teacher-mobile", "/teacher/dashboard");

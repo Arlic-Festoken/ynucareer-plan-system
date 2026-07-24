@@ -1,8 +1,10 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import AuthRoute from "./components/common/AuthRoute";
 import RoleRoute from "./components/common/RoleRoute";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const StudentHomePage = lazy(() => import("./pages/StudentHomePage"));
 const AwakeningPage = lazy(() => import("./pages/AwakeningPage"));
@@ -11,6 +13,7 @@ const AiPlanningPage = lazy(() => import("./pages/AiPlanningPage"));
 const RoadmapPage = lazy(() => import("./pages/RoadmapPage"));
 const GraduatePage = lazy(() => import("./pages/GraduatePage"));
 const AdminDashboardPage = lazy(() => import("./pages/AdminDashboardPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 function PageFallback() { return <div className="route-loader" role="status">正在加载页面…</div>; }
@@ -18,13 +21,16 @@ function PageFallback() { return <div className="route-loader" role="status">正
 export default function App() {
   return <Suspense fallback={<PageFallback />}><Routes>
     <Route path="/" element={<LandingPage />} />
-    <Route path="/onboarding" element={<OnboardingPage />} />
-    <Route path="/student/home" element={<RoleRoute allowed={["freshman", "junior"]}><StudentHomePage /></RoleRoute>} />
-    <Route path="/student/awakening" element={<RoleRoute allowed={["freshman"]}><AwakeningPage /></RoleRoute>} />
-    <Route path="/student/matching" element={<RoleRoute allowed={["junior"]}><MatchingPage /></RoleRoute>} />
-    <Route path="/student/ai-planning" element={<RoleRoute allowed={["freshman", "junior"]}><AiPlanningPage /></RoleRoute>} />
-    <Route path="/student/roadmap" element={<RoleRoute allowed={["freshman", "junior"]}><RoadmapPage /></RoleRoute>} />
-    <Route path="/graduate/navigation" element={<RoleRoute allowed={["graduate"]}><GraduatePage /></RoleRoute>} />
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/register" element={<LoginPage />} />
+    <Route path="/onboarding" element={<AuthRoute><OnboardingPage /></AuthRoute>} />
+    <Route path="/student/home" element={<AuthRoute><RoleRoute allowed={["freshman", "junior"]}><StudentHomePage /></RoleRoute></AuthRoute>} />
+    <Route path="/student/awakening" element={<AuthRoute><RoleRoute allowed={["freshman"]}><AwakeningPage /></RoleRoute></AuthRoute>} />
+    <Route path="/student/matching" element={<AuthRoute><RoleRoute allowed={["junior"]}><MatchingPage /></RoleRoute></AuthRoute>} />
+    <Route path="/student/ai-planning" element={<AuthRoute><RoleRoute allowed={["freshman", "junior"]}><AiPlanningPage /></RoleRoute></AuthRoute>} />
+    <Route path="/student/roadmap" element={<AuthRoute><RoleRoute allowed={["freshman", "junior"]}><RoadmapPage /></RoleRoute></AuthRoute>} />
+    <Route path="/graduate/navigation" element={<AuthRoute><RoleRoute allowed={["graduate"]}><GraduatePage /></RoleRoute></AuthRoute>} />
+    <Route path="/account/profile" element={<AuthRoute><ProfilePage /></AuthRoute>} />
     <Route path="/teacher/dashboard" element={<AdminDashboardPage />} />
     <Route path="/admin/dashboard" element={<Navigate replace to="/teacher/dashboard" />} />
     <Route path="*" element={<NotFoundPage />} />

@@ -1,7 +1,11 @@
-FROM node:22-alpine
+FROM node:22-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 COPY server ./server
+RUN mkdir -p /data && chown node:node /data
+VOLUME ["/data"]
 USER node
 EXPOSE 8787
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

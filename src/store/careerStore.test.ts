@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { blankAbilities } from "../data/catalog";
-import { migrateCareerState, useCareerStore } from "./careerStore";
+import { careerStateSnapshot, migrateCareerState, useCareerStore } from "./careerStore";
 
 describe("career store", () => {
   it("persists onboarding data in the active state and can reset it", () => {
@@ -37,5 +37,17 @@ describe("career store", () => {
     expect(useCareerStore.getState().aiPlanning).toMatchObject({ preferredScenes: ["教育科技"], selectedCandidateId: "ai-direction-1", timeBudgetHours: 8 });
     useCareerStore.getState().resetDemo();
     expect(useCareerStore.getState().aiPlanning).toMatchObject({ preferredScenes: [], selectedCandidateId: null, timeBudgetHours: 6 });
+  });
+
+  it("replaces local data with a migrated account snapshot and exposes data without actions", () => {
+    useCareerStore.getState().replaceCareerData({
+      hasOnboarded: true,
+      profile: { id: "remote", role: "junior", grade: 3, major: "软件工程", targetPath: "employment", interests: ["人工智能"], values: ["技术精进"], abilityScores: { programming: 88 } },
+    });
+    const snapshot = careerStateSnapshot(useCareerStore.getState());
+    expect(snapshot.profile).toMatchObject({ id: "remote", major: "软件工程", abilityScores: { programming: 88 } });
+    expect(snapshot.profile.abilityScores.communication).toBe(blankAbilities.communication);
+    expect(snapshot).not.toHaveProperty("resetDemo");
+    expect(snapshot).not.toHaveProperty("replaceCareerData");
   });
 });

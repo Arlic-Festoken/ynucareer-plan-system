@@ -10,5 +10,6 @@ test-results/
 playwright-report/
 dev-server.log
 output/
+data/
 *.tsbuildinfo
 .superpowers/

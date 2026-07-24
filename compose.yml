@@ -3,7 +3,7 @@ name: career-navigation
 services:
   career-navigation:
     build: .
-    image: career-navigation:0.5.0
+    image: career-navigation:0.6.0
     container_name: career-navigation
     ports:
       - "8080:8080"
@@ -21,17 +21,24 @@ services:
     build:
       context: .
       dockerfile: server/Dockerfile
-    image: career-navigation-api:0.5.0
+    image: career-navigation-api:0.6.0
     restart: unless-stopped
     expose:
       - "8787"
     environment:
       PORT: "8787"
+      DATABASE_PATH: /data/career.db
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-flash}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
     read_only: true
     tmpfs:
       - /tmp
+    volumes:
+      - career-data:/data
     security_opt:
       - no-new-privileges:true
+
+volumes:
+  career-data:

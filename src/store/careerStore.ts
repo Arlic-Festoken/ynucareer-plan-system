@@ -47,6 +47,7 @@ type CareerStore = CareerStateData & {
   addResearchOutcome: (outcome: ResearchOutcome) => void;
   removeResearchOutcome: (id: string) => void;
   updateResearchTask: (lane: "researchTasks" | "careerTasks", id: string, patch: Partial<ActionTask>) => void;
+  replaceCareerData: (data: unknown) => void;
   resetDemo: () => void;
 };
 
@@ -97,6 +98,18 @@ export function migrateCareerState(persistedState: unknown): CareerStateData {
   };
 }
 
+export function careerStateSnapshot(state: CareerStateData): CareerStateData {
+  return {
+    hasOnboarded: state.hasOnboarded,
+    profile: state.profile,
+    awakening: state.awakening,
+    selectedJobId: state.selectedJobId,
+    roadmapTasks: state.roadmapTasks,
+    research: state.research,
+    aiPlanning: state.aiPlanning,
+  };
+}
+
 export const useCareerStore = create<CareerStore>()(
   persist(
     (set) => ({
@@ -113,6 +126,7 @@ export const useCareerStore = create<CareerStore>()(
       addResearchOutcome: (outcome) => set((state) => ({ research: { ...state.research, outcomes: [...state.research.outcomes, outcome] } })),
       removeResearchOutcome: (id) => set((state) => ({ research: { ...state.research, outcomes: state.research.outcomes.filter((outcome) => outcome.id !== id) } })),
       updateResearchTask: (lane, id, patch) => set((state) => ({ research: { ...state.research, [lane]: updateTask(state.research[lane], id, patch) } })),
+      replaceCareerData: (data) => set(migrateCareerState(data)),
       resetDemo: () => set({ ...defaultData, profile: { ...defaultProfile, abilityScores: { ...blankAbilities }, interests: [...defaultProfile.interests], values: [...defaultProfile.values] } }),
     }),
     {

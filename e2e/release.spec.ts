@@ -1,12 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { clearLocalCareerData, onboardRole, registerTestAccount } from "./helpers";
 
 async function onboardHigherGrade(page: import("@playwright/test").Page) {
-  await page.goto("/onboarding");
-  await page.evaluate(() => window.localStorage.clear());
-  await page.reload();
-  await page.getByRole("radio", { name: "高年级学生" }).check();
-  await page.getByRole("button", { name: "继续" }).click();
-  await page.getByRole("button", { name: "生成我的行动计划" }).click();
+  await onboardRole(page, "高年级学生");
 }
 
 test("all four higher-grade pathways generate executable plans", async ({ page }) => {
@@ -38,10 +34,9 @@ test("roadmap supports custom actions and persists them", async ({ page }) => {
 });
 
 test("route guards, 404 and AI fallback behave safely", async ({ page, request }) => {
-  await page.goto("/");
-  await page.evaluate(() => window.localStorage.clear());
+  await clearLocalCareerData(page);
   await page.goto("/student/matching");
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fstudent%2Fmatching$/);
   await page.goto("/a-page-that-does-not-exist");
   await expect(page.getByRole("heading", { name: "这里没有你要找的页面。" })).toBeVisible();
 
@@ -155,6 +150,7 @@ test("teacher empty filters recover without generating fake advice", async ({ pa
 });
 
 test("partial legacy browser data migrates into a usable profile", async ({ page }) => {
+  await registerTestAccount(page);
   await page.addInitScript(() => {
     localStorage.setItem("career-navigation-v1", JSON.stringify({
       version: 0,

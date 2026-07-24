@@ -16,7 +16,7 @@ export default function LandingPage() {
         <h1><span>找到方向，</span><strong>看清差距，完成行动。</strong></h1>
         <p>按你的年级和目标，生成方向探索、岗位匹配与成长任务。</p>
         <div className="hero-actions"><Link className="button button-primary" to="/onboarding">生成我的行动计划 <ArrowRight size={18} /></Link><a className="button button-quiet" href="#how-it-works">查看适用阶段</a></div>
-        <div className="privacy-inline"><ShieldCheck size={17} /> 无需登录 · 数据仅存当前浏览器</div>
+        <div className="privacy-inline"><ShieldCheck size={17} /> 安全账号同步 · 不采集学号与成绩</div>
       </div>
       <aside className="hero-signal" aria-label="行动计划预览">
         <div className="signal-topline"><span>PERSONAL PLAN / 01</span><i>本地生成</i></div>
