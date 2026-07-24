@@ -1,4 +1,4 @@
-import { ArrowRight, Bot, Check, CircleAlert, Clock3, LoaderCircle, Route, ShieldCheck, Sparkles, Target } from "lucide-react";
+import { ArrowRight, Bot, Check, CircleAlert, Clock3, LoaderCircle, Route, Sparkles, Target } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getCoachStatus, type CoachStatus } from "../api/careerCoach";
@@ -114,7 +114,7 @@ export default function AiPlanningPage() {
     </section>
 
     <section className="ai-context-panel">
-      <div className="ai-context-heading"><div><span className="section-kicker">01 · 补充上下文</span><h2>告诉 AI 你已经做过什么，以及现实限制。</h2></div><span><ShieldCheck size={15} />不填写姓名、成绩、联系方式</span></div>
+      <div className="ai-context-heading"><div><span className="section-kicker">01 · 补充上下文</span><h2>补充经历和现实限制。</h2></div></div>
       <fieldset><legend>想优先接近的场景（最多 3 个）</legend><div className="option-chips">{sceneOptions.map((scene) => <label key={scene}><input checked={aiPlanning.preferredScenes.includes(scene)} onChange={() => toggleScene(scene)} type="checkbox" /><span>{scene}</span></label>)}</div></fieldset>
       <div className="ai-context-fields">
         <label>已有经历或优势证据<textarea maxLength={600} onChange={(event) => setAiPlanning({ strengthEvidence: event.target.value, directionResult: null, selectedCandidateId: null, actionPlan: null })} placeholder="例如：做过校园数据可视化项目，负责需求访谈和数据清洗。" rows={4} value={aiPlanning.strengthEvidence} /></label>

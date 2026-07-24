@@ -135,7 +135,7 @@ test("teacher workspace keeps teacher navigation after student onboarding", asyn
   await onboardHigherGrade(page);
   await page.goto("/teacher/dashboard");
   await expect(page.getByRole("link", { name: "模拟洞察" })).toBeVisible();
-  await expect(page.getByText("教师端 · 脱敏模拟数据")).toBeVisible();
+  await expect(page.getByText("教师演示")).toBeVisible();
   await expect(page.getByRole("link", { name: "工作台" })).toHaveCount(0);
 });
 

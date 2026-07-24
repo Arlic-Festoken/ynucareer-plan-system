@@ -1,10 +1,12 @@
-import { Check, Cloud, Database, LogOut, Mail, Save, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowRight, Check, Cloud, Compass, LogOut, Mail, Save, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PageShell from "../components/common/PageShell";
 import { majors } from "../data/catalog";
 import { useAuthStore } from "../store/authStore";
-import { useCareerStore } from "../store/careerStore";
+import { resolveHome, useCareerStore } from "../store/careerStore";
+
+const pathLabels = { employment: "就业准备", recommendation: "推免准备", postgraduate: "考研准备", "civil-service": "考公准备" };
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -36,7 +38,7 @@ export default function ProfilePage() {
       await saveProfile(form);
       updateCareerProfile({ major: form.major, grade: form.grade });
       await syncCareerNow();
-      setMessage("已保存并同步到当前账号。");
+      setMessage("已保存");
     } catch {
       setMessage("保存失败，请稍后重试。");
     } finally {
@@ -49,16 +51,19 @@ export default function ProfilePage() {
     navigate("/login", { replace: true });
   }
 
-  return <PageShell eyebrow="个人中心" title="你的资料，只服务于更准确的下一步。" description="账号资料与生涯任务保存在服务端数据库，可在同一账号下继续。">
+  const stage = careerProfile.role === "graduate" ? "科研与就业双线" : careerProfile.grade <= 2 ? "方向探索" : pathLabels[careerProfile.targetPath];
+  const gradeLabel = careerProfile.grade <= 4 ? `大 ${careerProfile.grade}` : `研 ${careerProfile.grade - 4}`;
+
+  return <PageShell eyebrow="个人中心" title="完善资料，让建议更贴近你。">
     <section className="profile-summary">
       <div className="profile-avatar"><UserRound size={28} /></div>
       <div><span className="section-kicker">当前账号</span><h2>{user?.displayName}</h2><p><Mail size={15} />{user?.email}</p></div>
-      <div className={`profile-sync is-${syncStatus}`}><Cloud size={17} /><span>{syncStatus === "saving" ? "正在同步" : syncStatus === "error" ? "同步失败" : "已连接数据库"}</span><small>{lastSyncedAt ? `最近同步 ${new Date(lastSyncedAt).toLocaleString("zh-CN", { hour: "2-digit", minute: "2-digit" })}` : "等待首次同步"}</small></div>
+      <div className={`profile-sync is-${syncStatus}`}><Cloud size={17} /><span>{syncStatus === "saving" ? "正在保存" : syncStatus === "error" ? "保存失败" : "已保存"}</span><small>{lastSyncedAt ? new Date(lastSyncedAt).toLocaleString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "等待保存"}</small></div>
     </section>
 
     <div className="profile-layout">
       <form className="profile-form" onSubmit={submit}>
-        <div><span className="section-kicker">学习背景</span><h2>用于调整方向和行动建议</h2><p>不填写学号、成绩、电话或家庭信息。</p></div>
+        <div><span className="section-kicker">学习背景</span><h2>完善学习背景</h2></div>
         <div className="profile-form-grid">
           <label>学校<input maxLength={80} onChange={(event) => setForm({ ...form, university: event.target.value })} required value={form.university} /></label>
           <label>学院<input maxLength={80} onChange={(event) => setForm({ ...form, college: event.target.value })} placeholder="例如：软件学院" value={form.college} /></label>
@@ -70,8 +75,9 @@ export default function ProfilePage() {
       </form>
 
       <aside className="account-panel">
-        <div><ShieldCheck size={22} /><span className="section-kicker">数据边界</span><h2>账号数据如何保存</h2></div>
-        <ul><li><Database size={15} />账号、资料、任务和复盘按用户隔离</li><li><ShieldCheck size={15} />登录会话使用 HttpOnly Cookie</li><li><Cloud size={15} />本地修改自动同步到 SQLite 数据库</li></ul>
+        <div><Compass size={22} /><span className="section-kicker">当前规划</span><h2>{stage}</h2></div>
+        <dl className="account-plan-meta"><div><dt>专业</dt><dd>{careerProfile.major}</dd></div><div><dt>年级</dt><dd>{gradeLabel}</dd></div></dl>
+        <Link className="button button-secondary account-home-link" to={resolveHome(careerProfile.role, careerProfile.grade)}>回到工作台 <ArrowRight size={15} /></Link>
         <button className="button button-quiet danger-button" onClick={signOut} type="button"><LogOut size={16} />退出登录</button>
       </aside>
     </div>

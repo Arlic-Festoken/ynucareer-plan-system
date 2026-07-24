@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Database, LockKeyhole, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { resolveHome, useCareerStore } from "../store/careerStore";
@@ -48,7 +48,7 @@ export default function LoginPage() {
   return <main className="auth-page">
     <Link className="site-brand auth-brand" to="/" aria-label="向前生涯导航首页"><span className="brand-square">→</span><span>向前<span className="brand-sub">CAREER</span></span></Link>
     <section className="auth-layout">
-      <div className="auth-story"><span className="section-kicker">账号与数据</span><h1>{registerMode ? "保存你的每一步，换设备也能继续。" : "欢迎回来，继续上次的行动。"}</h1><p>账号用于同步个人资料、方向选择、行动任务和复盘，不采集学号、成绩或联系方式。</p><div className="auth-proof-list"><span><LockKeyhole size={17} />密码使用独立盐值哈希保存</span><span><Database size={17} />生涯数据隔离到当前账号</span><span><Sparkles size={17} />DeepSeek 仅接收规划所需字段</span></div></div>
+      <div className="auth-story"><span className="section-kicker">个人生涯工作台</span><h1>{registerMode ? "建立自己的行动节奏。" : "欢迎回来，继续向前。"}</h1><p>{registerMode ? "从一个方向开始，用行动逐步验证。" : "接着完成上次留下的计划。"}</p><div className="auth-progress-preview" aria-label="规划流程"><div><span>01</span><strong>选方向</strong></div><div><span>02</span><strong>做行动</strong></div><div><span>03</span><strong>看进展</strong></div></div></div>
       <form className="auth-form" onSubmit={submit}>
         <div><span className="section-kicker">{registerMode ? "创建账号" : "账号登录"}</span><h2>{registerMode ? "从这里开始" : "继续你的计划"}</h2></div>
         {registerMode && <label>昵称<input autoComplete="name" maxLength={40} onChange={(event) => setDisplayName(event.target.value)} placeholder="例如：云同学" required value={displayName} /></label>}
@@ -57,7 +57,6 @@ export default function LoginPage() {
         {authError && <p className="form-error" role="alert">{authError}</p>}
         <button className="button button-primary auth-submit" disabled={submitting || status === "checking"} type="submit">{submitting ? "正在处理…" : registerMode ? "创建账号" : "登录"} <ArrowRight size={17} /></button>
         <p className="auth-switch">{registerMode ? "已有账号？" : "第一次使用？"} <Link to={registerMode ? "/login" : "/register"}>{registerMode ? "直接登录" : "创建账号"}</Link></p>
-        <div className="auth-boundary"><CheckCircle2 size={16} /><span>请勿在个人简介或 AI 输入中填写身份证号、手机号、家庭信息或成绩单。</span></div>
       </form>
     </section>
   </main>;

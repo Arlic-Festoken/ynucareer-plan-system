@@ -65,7 +65,7 @@ test("graduate can build dual-lane planning", async ({ page }) => {
 
 test("teacher can filter the anonymized cohort sample", async ({ page }) => {
   await page.goto("/teacher/dashboard");
-  await expect(page.getByText("不读取个人画像，不展示可识别记录。")).toBeVisible();
+  await expect(page.getByText("教师演示")).toBeVisible();
   await page.getByLabel("阶段").selectOption("研究生");
   await expect(page.getByText("模拟样本", { exact: true })).toBeVisible();
 });

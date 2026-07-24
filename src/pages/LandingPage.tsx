@@ -1,4 +1,4 @@
-import { ArrowRight, Check, CircleDot, Compass, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Check, CircleDot, Compass, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import PageShell from "../components/common/PageShell";
 
@@ -16,7 +16,6 @@ export default function LandingPage() {
         <h1><span>找到方向，</span><strong>看清差距，完成行动。</strong></h1>
         <p>按你的年级和目标，生成方向探索、岗位匹配与成长任务。</p>
         <div className="hero-actions"><Link className="button button-primary" to="/onboarding">生成我的行动计划 <ArrowRight size={18} /></Link><a className="button button-quiet" href="#how-it-works">查看适用阶段</a></div>
-        <div className="privacy-inline"><ShieldCheck size={17} /> 安全账号同步 · 不采集学号与成绩</div>
       </div>
       <aside className="hero-signal" aria-label="行动计划预览">
         <div className="signal-topline"><span>PERSONAL PLAN / 01</span><i>本地生成</i></div>
@@ -35,6 +34,6 @@ export default function LandingPage() {
       <div className="role-path-copy"><span className="section-kicker">选择当前阶段</span><h2>按阶段进入对应工作流。</h2><p>只呈现与你现在有关的任务。</p></div>
       <div className="role-path-list"><Link to="/onboarding"><span>01</span><div><strong>低年级 · 探索方向</strong><small>价值与兴趣 → 场景 → 真实行动</small></div><ArrowRight size={18} /></Link><Link to="/onboarding"><span>02</span><div><strong>高年级 · 路径决策</strong><small>岗位或升学目标 → 差距 → 路线图</small></div><ArrowRight size={18} /></Link><Link to="/onboarding"><span>03</span><div><strong>研究生 · 双线导航</strong><small>科研成果 → 能力证据 → 职业准备</small></div><ArrowRight size={18} /></Link></div>
     </section>
-    <section className="teacher-callout"><Compass size={24} /><div><span className="section-kicker">教师与指导者</span><h2>查看脱敏模拟群体的阶段、短板与资源需求。</h2></div><Link className="button button-secondary" to="/teacher/dashboard">进入教师端 <ArrowRight size={16} /></Link></section>
+    <section className="teacher-callout"><Compass size={24} /><div><span className="section-kicker">教师与指导者</span><h2>查看群体阶段、能力短板与资源需求。</h2></div><Link className="button button-secondary" to="/teacher/dashboard">进入教师端 <ArrowRight size={16} /></Link></section>
   </PageShell>;
 }

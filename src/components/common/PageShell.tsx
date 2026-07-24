@@ -33,13 +33,13 @@ export default function PageShell({ children, eyebrow, title, description, mode 
     <header className="site-header">
       <Link className="site-brand" to="/" aria-label="向前生涯导航首页"><span className="brand-square">→</span><span>向前<span className="brand-sub">CAREER</span></span></Link>
       <nav aria-label="主导航" className="site-nav">{navItems.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to}><Icon size={16} />{label}</NavLink>)}</nav>
-      <div className="site-actions">{isTeacher ? <span className="stage-chip">教师端 · 脱敏模拟数据</span> : hasOnboarded && <span className="stage-chip">{accountUser?.displayName || roleLabel[profile.role]} · {profile.major}</span>}{hasOnboarded && !isTeacher && <button aria-label="重置当前账号规划数据" className="icon-button" onClick={resetDemo} title="重置当前账号规划数据" type="button"><RotateCcw size={16} /></button>}</div>
+      <div className="site-actions">{isTeacher ? <span className="stage-chip">教师演示</span> : hasOnboarded && <span className="stage-chip">{accountUser?.displayName || roleLabel[profile.role]} · {profile.major}</span>}{hasOnboarded && !isTeacher && <button aria-label="重置当前账号规划数据" className="icon-button" onClick={resetDemo} title="重置当前账号规划数据" type="button"><RotateCcw size={16} /></button>}</div>
     </header>
-    {!storageAvailable && <div className="storage-warning" role="alert">当前浏览器阻止本地缓存。请保持网络连接，避免在同步完成前关闭页面。</div>}
+    {!storageAvailable && <div className="storage-warning" role="alert">暂时无法自动保存，请检查浏览器设置。</div>}
     <main id="main-content" className="site-main">
       {(title || description) && <section className="page-intro"><div><span className="section-kicker">{eyebrow}</span>{title && <h1>{title}</h1>}{description && <p>{description}</p>}</div></section>}
       {children}
     </main>
-    <footer className="site-footer"><span>向前 · 大学生生涯导航平台</span><span>{accountUser ? "账号模式：资料与行动同步到服务端数据库" : "访客模式：不收集身份、成绩或联系方式"}</span></footer>
+    <footer className="site-footer"><span>向前 · 大学生生涯导航平台</span><span>云南大学</span></footer>
   </div>;
 }

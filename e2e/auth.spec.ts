@@ -1,4 +1,18 @@
 import { expect, test } from "@playwright/test";
+import { registerTestAccount } from "./helpers";
+
+test("account screens keep technical policy copy out of the primary experience", async ({ page }) => {
+  const technicalCopy = /不采集|独立盐值|数据隔离|规划所需字段|身份证号|HttpOnly|SQLite|服务端数据库|数据边界/;
+
+  await page.goto("/register");
+  await expect(page.getByRole("heading", { name: "建立自己的行动节奏。" })).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(technicalCopy);
+
+  await registerTestAccount(page);
+  await page.goto("/account/profile");
+  await expect(page.locator("body")).not.toContainText(technicalCopy);
+  await expect(page.getByRole("heading", { name: "完善学习背景" })).toBeVisible();
+});
 
 test("account API persists profile and career state behind an HttpOnly session", async ({ request }) => {
   const email = `student-${Date.now()}@ynu.edu.cn`;
