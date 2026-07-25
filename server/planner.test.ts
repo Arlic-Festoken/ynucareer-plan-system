@@ -43,7 +43,7 @@ describe("DeepSeek planning boundary", () => {
       fit: "优先验证",
       rationale: "兴趣和已有项目均指向数据驱动的问题解决。",
       problemExamples: ["识别学习流失节点", "评估功能对学习效果的影响"],
-      evidenceNeeded: ["一份分析报告", "一次从业者反馈"],
+      evidenceNeeded: ["一份分析报告", "一页能力对照"],
       tradeoffs: "需要同时补充业务理解和数据表达。",
       firstExperiment: { title: "分析一份公开学习数据", detail: "完成问题定义、清洗和三项发现。", successSignal: "能向同学讲清一项可行动的结论。" },
     };
@@ -59,6 +59,11 @@ describe("DeepSeek planning boundary", () => {
     expect(result.candidates).toHaveLength(3);
     expect(result.candidates[0].id).toBe("ai-direction-1");
     expect(() => parseDirectionResponse(JSON.stringify({ overview: "不足", candidates: [candidate] }))).toThrow("invalid_model_shape");
+    expect(() => parseDirectionResponse(JSON.stringify({ overview: "先比较三个可验证方向。", candidates: [
+      { ...candidate, firstExperiment: { ...candidate.firstExperiment, title: "完成一次企业访谈" } },
+      { ...candidate, title: "教育 AI 产品实验" },
+      { ...candidate, title: "数据治理与质量" },
+    ] }))).toThrow("invalid_model_shape");
   });
 
   it("turns a selected direction into validated executable tasks", () => {
@@ -93,5 +98,13 @@ describe("DeepSeek planning boundary", () => {
     }));
     expect(result.tasks).toHaveLength(5);
     expect(result.tasks[0]).toMatchObject({ priority: "high", category: "practice" });
+    expect(() => parseActionPlanResponse(JSON.stringify({
+      directionTitle: "学习产品数据分析",
+      objective: "八周内完成一次方向验证。",
+      strategy: "先做小实验，再根据反馈补能力。",
+      tasks: [{ ...tasks[0], title: "约访企业从业者" }, ...tasks.slice(1)],
+      checkpoints: [{ week: "第 2 周", question: "是否愿意继续？" }, { week: "第 6 周", question: "证据是否足够？" }],
+      risks: ["把工具学习当成最终产出"],
+    }))).toThrow("invalid_model_shape");
   });
 });

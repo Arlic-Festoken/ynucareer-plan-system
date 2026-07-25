@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { onboardRole, registerAndOpenOnboarding } from "./helpers";
 
+test("landing previews an evidence-building task instead of a research interview", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("完成一份岗位能力对照")).toBeVisible();
+  await expect(page.locator("main")).not.toContainText(/岗位访谈|准备 3 个访谈问题|联系 1 位相关从业者/);
+});
+
 test("low-grade student completes an exploration action", async ({ page }) => {
   await onboardRole(page, "低年级学生");
   await expect(page.getByRole("heading", { name: /你好/ })).toBeVisible();
@@ -19,10 +25,10 @@ test("low-grade student completes an exploration action", async ({ page }) => {
   await page.getByRole("link", { name: "行动计划" }).click();
   await expect(page.getByRole("heading", { name: "让计划进入真实的时间里。" })).toBeVisible();
   await expect(page.getByText("完成一个 API 调用小作品")).toBeVisible();
-  await page.getByLabel("这周想推进的一件事").fill("参观一次实验室开放日");
+  await page.getByLabel("这周想推进的一件事").fill("完成一次实验室开放日观察记录");
   await page.getByRole("button", { name: "加入计划" }).click();
   await page.reload();
-  await expect(page.getByText("参观一次实验室开放日")).toBeVisible();
+  await expect(page.getByText("完成一次实验室开放日观察记录")).toBeVisible();
 });
 
 test("higher-grade student completes and reflects on a persisted action", async ({ page }) => {

@@ -117,7 +117,7 @@ export default function AiPlanningPage() {
       <div className="ai-context-heading"><div><span className="section-kicker">01 · 补充上下文</span><h2>补充经历和现实限制。</h2></div></div>
       <fieldset><legend>想优先接近的场景（最多 3 个）</legend><div className="option-chips">{sceneOptions.map((scene) => <label key={scene}><input checked={aiPlanning.preferredScenes.includes(scene)} onChange={() => toggleScene(scene)} type="checkbox" /><span>{scene}</span></label>)}</div></fieldset>
       <div className="ai-context-fields">
-        <label>已有经历或优势证据<textarea maxLength={600} onChange={(event) => setAiPlanning({ strengthEvidence: event.target.value, directionResult: null, selectedCandidateId: null, actionPlan: null })} placeholder="例如：做过校园数据可视化项目，负责需求访谈和数据清洗。" rows={4} value={aiPlanning.strengthEvidence} /></label>
+        <label>已有经历或优势证据<textarea maxLength={600} onChange={(event) => setAiPlanning({ strengthEvidence: event.target.value, directionResult: null, selectedCandidateId: null, actionPlan: null })} placeholder="例如：做过校园数据可视化项目，负责需求梳理和数据清洗。" rows={4} value={aiPlanning.strengthEvidence} /></label>
         <label>现实限制或需要避开的情况<textarea maxLength={500} onChange={(event) => setAiPlanning({ constraints: event.target.value, directionResult: null, selectedCandidateId: null, actionPlan: null })} placeholder="例如：每周课业较多，希望先用低成本项目验证。" rows={4} value={aiPlanning.constraints} /></label>
       </div>
       <label className="ai-time-budget"><span><Clock3 size={16} />每周可投入时间</span><input aria-label="每周可投入时间" max="20" min="2" onChange={(event) => setAiPlanning({ timeBudgetHours: Number(event.target.value), actionPlan: null })} type="range" value={aiPlanning.timeBudgetHours} /><output>{aiPlanning.timeBudgetHours} 小时</output></label>

@@ -17,7 +17,7 @@ describe("career store", () => {
   it("keeps an action reflection alongside its completed task", () => {
     const store = useCareerStore.getState();
     store.resetDemo();
-    store.setRoadmapTasks([{ id: "reflection-task", title: "完成访谈", detail: "记录一位从业者的经验", category: "career", priority: "high", semester: "本学期", completed: false }]);
+    store.setRoadmapTasks([{ id: "reflection-task", title: "完成能力对照", detail: "整理岗位要求与已有证据", category: "career", priority: "high", semester: "本学期", completed: false }]);
     store.updateRoadmapTask("reflection-task", { completed: true, reflection: "我确认自己更想解决真实业务问题。" });
     expect(useCareerStore.getState().roadmapTasks[0]).toMatchObject({ completed: true, reflection: "我确认自己更想解决真实业务问题。" });
   });

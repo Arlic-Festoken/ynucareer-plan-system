@@ -51,8 +51,8 @@ describe("recommendation service", () => {
   });
 
   it("preserves completion and reflection when a plan is regenerated", () => {
-    const previous = [{ id: "old", title: "完成访谈", detail: "旧说明", category: "career", priority: "high", semester: "本学期", completed: true, reflection: "确认了目标方向" }] as const;
-    const next = [{ id: "new", title: "完成访谈", detail: "新说明", category: "career", priority: "high", semester: "本学期", completed: false }] as const;
+    const previous = [{ id: "old", title: "完成能力对照", detail: "旧说明", category: "career", priority: "high", semester: "本学期", completed: true, reflection: "确认了目标方向" }] as const;
+    const next = [{ id: "new", title: "完成能力对照", detail: "新说明", category: "career", priority: "high", semester: "本学期", completed: false }] as const;
     expect(preserveTaskProgress([...next], [...previous])[0]).toMatchObject({ id: "new", detail: "新说明", completed: true, reflection: "确认了目标方向" });
   });
 });

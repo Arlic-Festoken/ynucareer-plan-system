@@ -10,6 +10,7 @@ const ABILITY_KEYS = [
   "careerPlanning",
 ];
 const TASK_CATEGORIES = new Set(["course", "project", "practice", "reflection", "research", "career"]);
+const INTERVIEW_ACTION_PATTERN = /访谈|约谈|约访|联系.{0,10}(?:从业者|校友|学长|企业|HR)/;
 
 function text(value, limit = MAX_TEXT) {
   return typeof value === "string" ? value.trim().slice(0, limit) : "";
@@ -22,6 +23,10 @@ function list(value, limit = MAX_LIST_ITEMS, itemLimit = 120) {
 function number(value, min, max, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.max(min, Math.min(max, Math.round(parsed))) : fallback;
+}
+
+function isInterviewAction(...values) {
+  return values.some((value) => INTERVIEW_ACTION_PATTERN.test(value));
 }
 
 function profile(input) {
@@ -93,6 +98,7 @@ export function buildDirectionRequest(input, model) {
       "你是一位熟悉中国高校培养路径与新兴产业岗位的生涯规划顾问。",
       "请把宽泛兴趣细分为 3 个彼此有实质差异、可通过行动验证的方向候选。",
       "候选应具体到问题场景或能力组合，不要只重复岗位名称；要解释画像证据、现实取舍与验证方式。",
+      "验证方式不得要求学生进行企业、校友或从业者访谈、约谈或联系；优先使用公开资料、课程、作品、模拟演练和自我复盘。",
       "不能承诺录取、就业或收入，不推断未提供的信息，不索取身份、成绩、联系方式、家庭或健康信息。",
       "输出严格 JSON：",
       "{\"overview\":string,\"candidates\":[{\"title\":string,\"specialization\":string,\"fit\":\"优先验证\"|\"值得比较\"|\"探索备选\",\"rationale\":string,\"problemExamples\":string[2-3],\"evidenceNeeded\":string[2-3],\"tradeoffs\":string,\"firstExperiment\":{\"title\":string,\"detail\":string,\"successSignal\":string}}],\"reflectionQuestion\":string}",
@@ -111,6 +117,7 @@ export function buildActionPlanRequest(input, model) {
     [
       "你是一位务实的大学生行动教练。请根据学生画像、时间约束和已选择的细分方向，生成个性化行动计划。",
       "计划必须先验证方向，再补能力和作品证据；每项任务要有明确产出，能被学生勾选完成。",
+      "不得把企业、校友或从业者访谈、约谈或联系他人作为任务；优先生成学生可自主完成的学习、分析、作品、模拟演练和复盘。",
       "不要承诺录取、就业或收入，不制造虚假课程、证书或企业机会，不索取敏感信息。",
       "输出严格 JSON：",
       "{\"directionTitle\":string,\"objective\":string,\"strategy\":string,\"tasks\":[{\"title\":string,\"detail\":string,\"week\":string,\"evidence\":string,\"priority\":\"high\"|\"medium\"|\"low\",\"category\":\"course\"|\"project\"|\"practice\"|\"reflection\"|\"research\"|\"career\"}],\"checkpoints\":[{\"week\":string,\"question\":string}],\"risks\":string[]}",
@@ -151,7 +158,7 @@ export function parseDirectionResponse(content) {
         successSignal: text(experiment.successSignal, 220),
       },
     };
-  }).filter((item) => item.title && item.specialization && item.rationale && item.problemExamples.length >= 2 && item.evidenceNeeded.length >= 2 && item.firstExperiment.title && item.firstExperiment.detail && item.firstExperiment.successSignal).slice(0, 3) : [];
+  }).filter((item) => item.title && item.specialization && item.rationale && item.problemExamples.length >= 2 && item.evidenceNeeded.length >= 2 && item.firstExperiment.title && item.firstExperiment.detail && item.firstExperiment.successSignal && !isInterviewAction(item.firstExperiment.title, item.firstExperiment.detail, item.firstExperiment.successSignal, ...item.evidenceNeeded)).slice(0, 3) : [];
 
   if (!text(parsed.overview, 500) || candidates.length !== 3) throw new Error("invalid_model_shape");
   return {
@@ -170,7 +177,7 @@ export function parseActionPlanResponse(content) {
     evidence: text(item?.evidence, 220),
     priority: ["high", "medium", "low"].includes(item?.priority) ? item.priority : "medium",
     category: TASK_CATEGORIES.has(item?.category) ? item.category : "practice",
-  })).filter((item) => item.title && item.detail && item.week && item.evidence).slice(0, 8) : [];
+  })).filter((item) => item.title && item.detail && item.week && item.evidence && !isInterviewAction(item.title, item.detail, item.evidence)).slice(0, 8) : [];
   const checkpoints = Array.isArray(parsed.checkpoints) ? parsed.checkpoints.map((item) => ({
     week: text(item?.week, 60),
     question: text(item?.question, 220),

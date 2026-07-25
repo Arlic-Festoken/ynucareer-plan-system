@@ -1,5 +1,6 @@
 const MAX_TEXT = 800;
 const MAX_LIST_ITEMS = 6;
+const INTERVIEW_ACTION_PATTERN = /访谈|约谈|约访|联系.{0,10}(?:从业者|校友|学长|企业|HR)/;
 
 function text(value, limit = MAX_TEXT) {
   return typeof value === "string" ? value.trim().slice(0, limit) : "";
@@ -12,6 +13,10 @@ function list(value) {
 function number(value, min = 0, max = 100) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.max(min, Math.min(max, Math.round(parsed))) : 0;
+}
+
+function isInterviewAction(...values) {
+  return values.some((value) => INTERVIEW_ACTION_PATTERN.test(value));
 }
 
 export function sanitizeCoachInput(input) {
@@ -57,7 +62,7 @@ export function buildCoachRequest(input, model) {
     messages: [
       {
         role: "system",
-        content: "你是一位谨慎、务实的大学生生涯教练。只根据给定的自评信息给出教育与探索建议；不承诺录取、就业或收入结果，不做心理诊断，不要求身份、联系方式、成绩、家庭或其他敏感信息。输出必须是 JSON：{\"headline\":string,\"summary\":string,\"nextActions\":[{\"title\":string,\"why\":string}],\"caution\":string}。nextActions 给出 2 至 3 项本周能执行的小行动，中文、具体、简洁。",
+        content: "你是一位谨慎、务实的大学生生涯教练。只根据给定的自评信息给出教育与探索建议；不承诺录取、就业或收入结果，不做心理诊断，不要求身份、联系方式、成绩、家庭或其他敏感信息。不要把企业、校友、从业者访谈、约谈或联系他人作为推荐行动，优先给出学生可自主完成的学习、作品、资料分析、模拟演练与复盘。输出必须是 JSON：{\"headline\":string,\"summary\":string,\"nextActions\":[{\"title\":string,\"why\":string}],\"caution\":string}。nextActions 给出 2 至 3 项本周能执行的小行动，中文、具体、简洁。",
       },
       { role: "user", content: userContext },
     ],
@@ -73,7 +78,7 @@ export function parseCoachResponse(content) {
   } catch {
     throw new Error("invalid_model_json");
   }
-  const nextActions = Array.isArray(parsed.nextActions) ? parsed.nextActions.map((item) => ({ title: text(item?.title, 100), why: text(item?.why, 220) })).filter((item) => item.title && item.why).slice(0, 3) : [];
+  const nextActions = Array.isArray(parsed.nextActions) ? parsed.nextActions.map((item) => ({ title: text(item?.title, 100), why: text(item?.why, 220) })).filter((item) => item.title && item.why && !isInterviewAction(item.title, item.why)).slice(0, 3) : [];
   if (!text(parsed.headline, 100) || !text(parsed.summary, 500) || nextActions.length < 2) throw new Error("invalid_model_shape");
   return { headline: text(parsed.headline, 100), summary: text(parsed.summary, 500), nextActions, caution: text(parsed.caution, 220) || "把建议当作下一次尝试的起点，并根据真实体验继续调整。" };
 }

@@ -68,7 +68,7 @@ export const directions: Direction[] = [
     interests: ["教育创新", "产品设计"],
     values: ["社会贡献", "团队协作"],
     starterTasks: [
-      { title: "访谈三位学习者", detail: "记录一个真实学习痛点并整理成问题陈述。", category: "practice", priority: "high" },
+      { title: "完成学习场景观察卡", detail: "选择一个课堂或学习工具场景，记录目标、障碍与改进想法。", category: "practice", priority: "high" },
       { title: "制作低保真原型", detail: "将一个学习场景绘制为三页可讲述的交互原型。", category: "project", priority: "medium" },
     ],
   },

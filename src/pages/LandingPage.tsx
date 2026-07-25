@@ -20,9 +20,9 @@ export default function LandingPage() {
       <aside className="hero-signal" aria-label="行动计划预览">
         <div className="signal-topline"><span>PERSONAL PLAN / 01</span><i>本地生成</i></div>
         <div className="signal-profile"><span>高年级 · 就业准备</span><strong>数据分析方向</strong></div>
-        <div className="signal-hero"><span>当前优先行动</span><strong>完成一次真实<br />岗位访谈</strong><p>验证岗位日常、能力要求和你的兴趣是否匹配。</p></div>
-        <div className="signal-task"><span><Check size={15} /></span><div><strong>准备 3 个访谈问题</strong><small>10 分钟 · 已完成</small></div></div>
-        <div className="signal-task"><span><CircleDot size={15} /></span><div><strong>联系 1 位相关从业者</strong><small>15 分钟 · 待进行</small></div></div>
+        <div className="signal-hero"><span>当前优先行动</span><strong>完成一份<br />岗位能力对照</strong><p>把岗位要求、已有证据和下一步写进同一张判断表。</p></div>
+        <div className="signal-task"><span><Check size={15} /></span><div><strong>收集 3 条岗位能力要求</strong><small>10 分钟 · 已完成</small></div></div>
+        <div className="signal-task"><span><CircleDot size={15} /></span><div><strong>写下 1 项已有能力证据</strong><small>15 分钟 · 待进行</small></div></div>
         <div className="signal-footer"><span>完成后更新</span><strong>方向证据 · 能力差距 · 下一步</strong></div>
       </aside>
     </section>

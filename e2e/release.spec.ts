@@ -26,11 +26,11 @@ test("roadmap supports custom actions and persists them", async ({ page }) => {
   await page.getByRole("link", { name: "目标诊断" }).click();
   await page.getByRole("button", { name: "生成成长路线图" }).click();
   await page.getByRole("link", { name: "查看已生成计划" }).click();
-  await page.getByLabel("这周想推进的一件事").fill("完成一次行业访谈");
+  await page.getByLabel("这周想推进的一件事").fill("完成一次行业岗位分析");
   await page.getByRole("button", { name: "加入计划" }).click();
-  await expect(page.getByText("完成一次行业访谈")).toBeVisible();
+  await expect(page.getByText("完成一次行业岗位分析")).toBeVisible();
   await page.reload();
-  await expect(page.getByText("完成一次行业访谈")).toBeVisible();
+  await expect(page.getByText("完成一次行业岗位分析")).toBeVisible();
 });
 
 test("route guards, 404 and AI fallback behave safely", async ({ page, request }) => {
@@ -64,7 +64,7 @@ test("DeepSeek planning flow creates candidates and saves a personalized plan", 
           problemExamples: ["识别学习流失节点", "评估功能效果"],
           evidenceNeeded: ["一页分析报告", "一次真实反馈"],
           tradeoffs: "需要同时补充业务理解和数据表达。",
-          firstExperiment: { title: "完成公开数据小实验", detail: "定义问题、分析数据并形成三项发现。", successSignal: "获得一位同学或从业者的有效反馈。" },
+          firstExperiment: { title: "完成公开数据小实验", detail: "定义问题、分析数据并形成三项发现。", successSignal: "形成一页可复核的分析结论。" },
         })),
         reflectionQuestion: "你最愿意连续两周处理哪类问题？",
       },
@@ -78,7 +78,7 @@ test("DeepSeek planning flow creates candidates and saves a personalized plan", 
         objective: "八周内完成一次学习产品数据分析方向验证。",
         strategy: "先用公开数据完成小实验，再通过真实反馈决定是否继续投入。",
         tasks: Array.from({ length: 5 }, (_, index) => ({
-          title: ["定义一个学习产品问题", "完成公开数据清洗", "形成三项分析发现", "约一次从业者反馈", "整理方向复盘"][index],
+          title: ["定义一个学习产品问题", "完成公开数据清洗", "形成三项分析发现", "完成一页能力对照", "整理方向复盘"][index],
           detail: "完成一个有明确产出的步骤，并保留过程记录。",
           week: `第 ${index + 1} 周`,
           evidence: "一页成果记录",
@@ -96,7 +96,7 @@ test("DeepSeek planning flow creates candidates and saves a personalized plan", 
   await page.goto("/student/ai-planning");
   await expect(page.getByText("DeepSeek 已连接")).toBeVisible();
   await page.getByText("教育科技", { exact: true }).click();
-  await page.getByLabel("已有经历或优势证据").fill("做过校园数据可视化项目，负责需求访谈与数据清洗。");
+  await page.getByLabel("已有经历或优势证据").fill("做过校园数据可视化项目，负责需求梳理与数据清洗。");
   await page.getByRole("button", { name: "生成 3 个细分方向" }).click();
   await expect(page.getByRole("button", { name: /学习产品数据分析/ })).toBeVisible();
   await page.getByRole("button", { name: /学习产品数据分析/ }).click();

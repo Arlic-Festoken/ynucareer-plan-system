@@ -10,8 +10,12 @@ describe("DeepSeek coach boundary", () => {
   });
 
   it("only accepts a complete structured model response", () => {
-    const advice = parseCoachResponse(JSON.stringify({ headline: "先完成一次真实访谈", summary: "访谈能帮助你验证方向。", nextActions: [{ title: "约访一位学长", why: "获得真实岗位信息" }, { title: "写下三条发现", why: "把体验转成下一次选择的证据" }], caution: "不要把一次访谈当作最终结论。" }));
+    const advice = parseCoachResponse(JSON.stringify({ headline: "先完成一份能力对照", summary: "用岗位要求和已有证据明确下一步。", nextActions: [{ title: "整理三条岗位要求", why: "明确需要补齐的能力" }, { title: "写下一项已有成果", why: "把经历转成下一次选择的证据" }], caution: "先完成一个小步骤，再决定是否继续投入。" }));
     expect(advice.nextActions).toHaveLength(2);
     expect(() => parseCoachResponse("not-json")).toThrow("invalid_model_json");
+  });
+
+  it("rejects interview-based actions from the model", () => {
+    expect(() => parseCoachResponse(JSON.stringify({ headline: "方向验证", summary: "先做小行动。", nextActions: [{ title: "约访一位学长", why: "获得岗位信息" }, { title: "整理三条岗位要求", why: "明确能力差距" }], caution: "持续复盘。" }))).toThrow("invalid_model_shape");
   });
 });

@@ -3,7 +3,7 @@ name: career-navigation
 services:
   career-navigation:
     build: .
-    image: career-navigation:0.6.1
+    image: career-navigation:0.6.2
     container_name: career-navigation
     ports:
       - "8080:8080"
@@ -21,7 +21,7 @@ services:
     build:
       context: .
       dockerfile: server/Dockerfile
-    image: career-navigation-api:0.6.1
+    image: career-navigation-api:0.6.2
     restart: unless-stopped
     expose:
       - "8787"

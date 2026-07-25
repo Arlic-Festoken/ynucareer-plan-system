@@ -31,7 +31,7 @@ export default function TaskList({ tasks, onToggle, onSaveReflection, emptyMessa
       </div>
       {task.completed && onSaveReflection && <button className="task-reflection-trigger" onClick={() => { setEditingTaskId(task.id); setDraft(task.reflection ?? ""); }} type="button">{task.reflection ? "编辑复盘" : "记录复盘"}</button>}
       {editingTaskId === task.id && <form className="task-reflection-form" onSubmit={(event) => { event.preventDefault(); onSaveReflection?.(task, draft.trim()); setEditingTaskId(null); }}>
-        <label>这一步让你确认或改变了什么？<textarea autoFocus maxLength={280} onChange={(event) => setDraft(event.target.value)} placeholder="例如：访谈后我发现自己更在意业务问题，而不是只写代码。" rows={3} value={draft} /></label>
+        <label>这一步让你确认或改变了什么？<textarea autoFocus maxLength={280} onChange={(event) => setDraft(event.target.value)} placeholder="例如：完成对照后，我发现数据分析和问题表达都需要继续练习。" rows={3} value={draft} /></label>
         <div><button className="button button-quiet" onClick={() => setEditingTaskId(null)} type="button">取消</button><button className="button button-primary" type="submit"><Save size={15} />保存复盘</button></div>
       </form>}
     </article>)}
