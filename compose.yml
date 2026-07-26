@@ -3,7 +3,7 @@ name: career-navigation
 services:
   career-navigation:
     build: .
-    image: career-navigation:0.6.2
+    image: career-navigation:0.7.0
     container_name: career-navigation
     ports:
       - "8080:8080"
@@ -21,7 +21,7 @@ services:
     build:
       context: .
       dockerfile: server/Dockerfile
-    image: career-navigation-api:0.6.2
+    image: career-navigation-api:0.7.0
     restart: unless-stopped
     expose:
       - "8787"
@@ -32,6 +32,13 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-flash}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      REGISTRATION_MODE: ${REGISTRATION_MODE:-invite}
+      CAREER_INVITED_EMAILS: ${CAREER_INVITED_EMAILS:-}
+      CAREER_TEACHER_EMAILS: ${CAREER_TEACHER_EMAILS:-}
+      IDENTITY_PROVIDER: ${IDENTITY_PROVIDER:-local}
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
     read_only: true
     tmpfs:
       - /tmp

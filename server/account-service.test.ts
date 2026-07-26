@@ -49,4 +49,22 @@ describe("account service", () => {
     expect(service.authenticate(login.sessionToken)).toBeNull();
     database.close();
   });
+
+  it("supports invite-only pilot registration without inventing university SSO", async () => {
+    const database = createDatabase(":memory:");
+    const service = createAccountService(database, {
+      registrationMode: "invite",
+      invitedEmails: "invited@ynu.edu.cn",
+      teacherEmails: "teacher@ynu.edu.cn",
+      randomId: () => crypto.randomUUID(),
+      randomToken: () => crypto.randomUUID(),
+    });
+    await expect(service.register({ email: "public@ynu.edu.cn", password: "1234567890", displayName: "未邀请" }))
+      .rejects.toThrow("registration_invite_required");
+    await expect(service.register({ email: "invited@ynu.edu.cn", password: "1234567890", displayName: "试点学生" }))
+      .resolves.toMatchObject({ user: { role: "student" } });
+    await expect(service.register({ email: "teacher@ynu.edu.cn", password: "1234567890", displayName: "试点教师" }))
+      .resolves.toMatchObject({ user: { role: "teacher" } });
+    database.close();
+  });
 });

@@ -5,13 +5,13 @@ import { getCoachStatus, type CoachStatus } from "../api/careerCoach";
 import { requestDirectionCandidates, requestPersonalizedPlan } from "../api/careerPlanner";
 import PageShell from "../components/common/PageShell";
 import TaskList from "../components/common/TaskList";
-import type { ActionTask, AiActionPlan, AiDirectionCandidate } from "../domain";
+import type { ActionTask, AiActionPlan, AiDirectionCandidate, GenerationTrace } from "../domain";
 import { preserveTaskProgress, recommendDirections } from "../services/recommendation";
 import { useCareerStore } from "../store/careerStore";
 
 const sceneOptions = ["教育科技", "人工智能应用", "数据与商业", "智慧医疗", "智能制造", "数字公共服务"];
 
-function toTasks(candidate: AiDirectionCandidate, tasks: AiActionPlan["tasks"]): ActionTask[] {
+function toTasks(candidate: AiDirectionCandidate, tasks: AiActionPlan["tasks"], trace?: GenerationTrace | null): ActionTask[] {
   return tasks.map((task, index) => ({
     id: `ai-plan-${candidate.id}-${index + 1}`,
     title: task.title,
@@ -21,6 +21,7 @@ function toTasks(candidate: AiDirectionCandidate, tasks: AiActionPlan["tasks"]):
     semester: task.week,
     completed: false,
     evidence: [`计划产出：${task.evidence}`, `方向：${candidate.title}`],
+    provenance: trace || undefined,
   }));
 }
 
@@ -68,7 +69,7 @@ export default function AiPlanningPage() {
     setSaved(false);
     try {
       const response = await requestDirectionCandidates(context);
-      setAiPlanning({ directionResult: response.result, selectedCandidateId: null, actionPlan: null, generatedAt: response.generatedAt });
+      setAiPlanning({ directionResult: response.result, selectedCandidateId: null, actionPlan: null, generatedAt: response.generatedAt, generationTrace: response.trace });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "AI 方向分析暂时不可用，请稍后重试。");
     } finally {
@@ -83,7 +84,7 @@ export default function AiPlanningPage() {
     setSaved(false);
     try {
       const response = await requestPersonalizedPlan({ ...context, selectedDirection: selected, horizonWeeks: aiPlanning.horizonWeeks });
-      setAiPlanning({ actionPlan: response.result, generatedAt: response.generatedAt });
+      setAiPlanning({ actionPlan: response.result, generatedAt: response.generatedAt, generationTrace: response.trace });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "AI 行动计划暂时不可用，请稍后重试。");
     } finally {
@@ -93,7 +94,7 @@ export default function AiPlanningPage() {
 
   function savePlan() {
     if (!selected || !aiPlanning.actionPlan) return;
-    const nextTasks = toTasks(selected, aiPlanning.actionPlan.tasks);
+    const nextTasks = toTasks(selected, aiPlanning.actionPlan.tasks, aiPlanning.generationTrace);
     if (profile.grade <= 2) {
       setAwakening({
         selectedDirectionId: selected.id,
@@ -105,7 +106,7 @@ export default function AiPlanningPage() {
     setSaved(true);
   }
 
-  const previewTasks = aiPlanning.actionPlan ? toTasks(selected as AiDirectionCandidate, aiPlanning.actionPlan.tasks) : [];
+  const previewTasks = aiPlanning.actionPlan ? toTasks(selected as AiDirectionCandidate, aiPlanning.actionPlan.tasks, aiPlanning.generationTrace) : [];
 
   return <PageShell eyebrow="DeepSeek · 个性化规划" title="把宽泛兴趣，缩小成可以验证的方向。" description="AI 结合画像与现实约束提出候选；最终选择仍由你的真实行动决定。">
     <section className="ai-planner-intro">

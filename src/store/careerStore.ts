@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { blankAbilities } from "../data/catalog";
-import type { ActionTask, CareerProfile, CareerStateData, ResearchOutcome, UserRole } from "../domain";
+import type { AbilityScores, ActionTask, CareerProfile, CareerStateData, ResearchOutcome, UserRole } from "../domain";
 
 const defaultProfile: CareerProfile = {
   id: "local-demo-profile",
@@ -31,6 +31,7 @@ const defaultData: CareerStateData = {
     selectedCandidateId: null,
     actionPlan: null,
     generatedAt: null,
+    generationTrace: null,
   },
 };
 
@@ -53,6 +54,41 @@ type CareerStore = CareerStateData & {
 
 const updateTask = (tasks: ActionTask[], id: string, patch: Partial<ActionTask>) => tasks.map((task) => (task.id === id ? { ...task, ...patch } : task));
 
+type LegacyAbilityScores = Partial<Record<
+  "professionalFoundation" | "programming" | "dataAnalysis" | "projectExperience" | "communication" | "industryKnowledge" | "careerPlanning",
+  number
+>>;
+
+const boundedScore = (value: unknown, fallback: number) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(100, Math.round(parsed))) : fallback;
+};
+
+export function migrateAbilityScores(input: unknown): AbilityScores {
+  const source = input && typeof input === "object" ? input as Partial<AbilityScores> & LegacyAbilityScores : {};
+  const hasCurrentModel = ["communicationCollaboration", "innovativeThinking", "professionalSkills", "digitalLiteracy", "responsibility", "continuousLearning", "resilience"]
+    .some((key) => key in source);
+  if (hasCurrentModel) {
+    return Object.fromEntries(Object.entries(blankAbilities).map(([key, fallback]) => [
+      key,
+      boundedScore(source[key as keyof AbilityScores], fallback),
+    ])) as AbilityScores;
+  }
+  const average = (...values: Array<number | undefined>) => {
+    const valid = values.filter((value): value is number => Number.isFinite(value));
+    return valid.length ? Math.round(valid.reduce((total, value) => total + value, 0) / valid.length) : 50;
+  };
+  return {
+    communicationCollaboration: boundedScore(source.communication, blankAbilities.communicationCollaboration),
+    innovativeThinking: boundedScore(average(source.dataAnalysis, source.projectExperience), blankAbilities.innovativeThinking),
+    professionalSkills: boundedScore(average(source.professionalFoundation, source.programming), blankAbilities.professionalSkills),
+    digitalLiteracy: boundedScore(average(source.programming, source.dataAnalysis), blankAbilities.digitalLiteracy),
+    responsibility: boundedScore(source.projectExperience, blankAbilities.responsibility),
+    continuousLearning: boundedScore(source.careerPlanning, blankAbilities.continuousLearning),
+    resilience: blankAbilities.resilience,
+  };
+}
+
 export function migrateCareerState(persistedState: unknown): CareerStateData {
   const persisted = persistedState && typeof persistedState === "object" ? persistedState as Partial<CareerStateData> : {};
   const persistedProfile: Partial<CareerProfile> = persisted.profile ?? {};
@@ -67,7 +103,7 @@ export function migrateCareerState(persistedState: unknown): CareerStateData {
       ...persistedProfile,
       interests: Array.isArray(persistedProfile.interests) ? persistedProfile.interests : [...defaultProfile.interests],
       values: Array.isArray(persistedProfile.values) ? persistedProfile.values : [...defaultProfile.values],
-      abilityScores: { ...blankAbilities, ...persistedProfile.abilityScores },
+      abilityScores: migrateAbilityScores(persistedProfile.abilityScores),
     },
     awakening: {
       ...defaultData.awakening,
@@ -131,7 +167,7 @@ export const useCareerStore = create<CareerStore>()(
     }),
     {
       name: "career-navigation-v1",
-      version: 2,
+      version: 3,
       migrate: (persistedState) => migrateCareerState(persistedState),
     },
   ),

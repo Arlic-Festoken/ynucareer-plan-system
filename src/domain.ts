@@ -1,19 +1,32 @@
 export const abilityKeys = [
-  "professionalFoundation",
-  "programming",
-  "dataAnalysis",
-  "projectExperience",
-  "communication",
-  "industryKnowledge",
-  "careerPlanning",
+  "communicationCollaboration",
+  "innovativeThinking",
+  "professionalSkills",
+  "digitalLiteracy",
+  "responsibility",
+  "continuousLearning",
+  "resilience",
 ] as const;
 
 export type AbilityKey = (typeof abilityKeys)[number];
+export type AbilityDimension = AbilityKey;
 export type AbilityScores = Record<AbilityKey, number>;
+export type AbilityConfidence = "low" | "medium" | "high";
+
+export type AbilityProfile = {
+  selfRating: AbilityScores;
+  verifiedScore: AbilityScores;
+  combinedScore: AbilityScores;
+  evidenceCounts: Record<AbilityKey, number>;
+  confidence: AbilityConfidence;
+  legacyNeedsReview: boolean;
+  updatedAt: string;
+};
 
 export type UserRole = "freshman" | "junior" | "graduate" | "teacher";
 export type Pathway = "employment" | "recommendation" | "postgraduate" | "civil-service";
 export type StudyStage = "exploration" | "decision" | "research";
+export type Permission = "publish_opportunity" | "review_opportunity" | "review_evidence" | "view_insights" | "manage_members";
 
 export type CareerProfile = {
   id: string;
@@ -36,6 +49,134 @@ export type ActionTask = {
   completed: boolean;
   reflection?: string;
   evidence?: string[];
+  opportunityId?: string;
+  opportunityTitle?: string;
+  sourceUrl?: string;
+  dueDate?: string;
+  provenance?: GenerationTrace;
+};
+
+export type ActionItemStatus = "planned" | "in_progress" | "submitted" | "completed" | "changes_requested";
+export type ActionItemSource = "manual" | "rule" | "ai" | "opportunity" | "research";
+export type GenerationTrace = {
+  generator: "rule" | "ai" | "opportunity" | "manual" | "research";
+  promptVersion: string;
+  ruleVersion: string;
+  model: string;
+  generatedAt: string;
+  resourceIds: string[];
+  autonomous: boolean;
+};
+
+export type ActionItem = {
+  id: string;
+  title: string;
+  detail: string;
+  category: ActionTask["category"];
+  priority: ActionTask["priority"];
+  lane: "exploration" | "growth" | "research" | "career";
+  source: ActionItemSource;
+  sourceId: string;
+  status: ActionItemStatus;
+  dueDate: string;
+  reflection: string;
+  trace: GenerationTrace;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OpportunityType = "course" | "project" | "competition" | "internship" | "consultation" | "research" | "event";
+export type OpportunityWorkflowStatus = "draft" | "pending_review" | "published" | "closed" | "archived" | "expired";
+export type ParticipationStatus = "saved" | "applied" | "in_progress" | "submitted" | "changes_requested" | "verified" | "withdrawn";
+export type OpportunityParticipationStatus = ParticipationStatus;
+
+export type OpportunityEligibility = {
+  stages: Array<Exclude<UserRole, "teacher">>;
+  pathways: Pathway[];
+  majors: string[];
+};
+
+export type OpportunityParticipation = {
+  status: ParticipationStatus;
+  evidenceNote: string;
+  evidenceUrl: string;
+  reflection: string;
+  reviewerFeedback: string;
+  updatedAt: string;
+};
+
+export type CampusOpportunity = {
+  id: string;
+  title: string;
+  summary: string;
+  type: OpportunityType;
+  provider: string;
+  organizationId: string;
+  organizationName: string;
+  sourceUrl: string;
+  applicationUrl: string;
+  deadline: string;
+  location: string;
+  deliveryMode: "online" | "offline" | "hybrid";
+  capacity: number | null;
+  evidenceRequirement: string;
+  abilityDimensions: AbilityDimension[];
+  eligibility: OpportunityEligibility;
+  tags: string[];
+  status: OpportunityWorkflowStatus;
+  reviewNote: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  participation?: OpportunityParticipation | null;
+};
+
+export type EvidenceStatus = "submitted" | "changes_requested" | "verified";
+
+export type EvidenceRecord = {
+  id: string;
+  actionItemId: string;
+  opportunityId: string;
+  title: string;
+  description: string;
+  evidenceUrl: string;
+  reflection: string;
+  status: EvidenceStatus;
+  rubric: Partial<Record<AbilityDimension, { score: number; weight: number }>>;
+  reviewerFeedback: string;
+  anonymousStudentCode: string;
+  submittedAt: string;
+  reviewedAt: string;
+};
+
+export type NotificationItem = {
+  id: string;
+  type: "deadline" | "changes_requested" | "evidence_verified";
+  title: string;
+  body: string;
+  href: string;
+  read: boolean;
+  createdAt: string;
+};
+
+export type DashboardAction = {
+  id: string;
+  title: string;
+  detail: string;
+  reason: string;
+  href: string;
+  dueDate: string;
+  priority: number;
+  status: ActionItemStatus | ParticipationStatus;
+};
+
+export type CohortInsights = {
+  suppressed: boolean;
+  sampleSize: number;
+  threshold: number;
+  funnel: { saved: number; applied: number; submitted: number; verified: number };
+  commonAbilityGaps: Array<{ ability: AbilityDimension; average: number }>;
+  resourceDemand: Array<{ type: OpportunityType; count: number }>;
 };
 
 export type Direction = {
@@ -146,6 +287,7 @@ export type AiPlanningState = {
   selectedCandidateId: string | null;
   actionPlan: AiActionPlan | null;
   generatedAt: string | null;
+  generationTrace: GenerationTrace | null;
 };
 
 export type CareerStateData = {

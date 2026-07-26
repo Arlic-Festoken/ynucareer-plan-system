@@ -1,13 +1,13 @@
 const MAX_TEXT = 800;
 const MAX_LIST_ITEMS = 8;
 const ABILITY_KEYS = [
-  "professionalFoundation",
-  "programming",
-  "dataAnalysis",
-  "projectExperience",
-  "communication",
-  "industryKnowledge",
-  "careerPlanning",
+  "communicationCollaboration",
+  "innovativeThinking",
+  "professionalSkills",
+  "digitalLiteracy",
+  "responsibility",
+  "continuousLearning",
+  "resilience",
 ];
 const TASK_CATEGORIES = new Set(["course", "project", "practice", "reflection", "research", "career"]);
 const INTERVIEW_ACTION_PATTERN = /访谈|约谈|约访|联系.{0,10}(?:从业者|校友|学长|企业|HR)/;

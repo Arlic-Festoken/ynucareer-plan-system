@@ -7,7 +7,7 @@ async function onboardHigherGrade(page: import("@playwright/test").Page) {
 
 test("all four higher-grade pathways generate executable plans", async ({ page }) => {
   await onboardHigherGrade(page);
-  await page.getByRole("link", { name: "目标诊断" }).click();
+  await page.getByRole("link", { name: "目标诊断", exact: true }).click();
 
   for (const pathway of ["推免", "考研", "考公"] as const) {
     await page.getByRole("button", { name: new RegExp(`^${pathway}`) }).click();
@@ -18,34 +18,41 @@ test("all four higher-grade pathways generate executable plans", async ({ page }
   await page.getByRole("button", { name: /^就业/ }).click();
   await page.getByRole("button", { name: "生成成长路线图" }).click();
   await page.getByRole("link", { name: "查看已生成计划" }).click();
-  await expect(page.locator(".task-row")).not.toHaveCount(0);
+  await expect(page.locator(".action-item")).not.toHaveCount(0);
 });
 
 test("roadmap supports custom actions and persists them", async ({ page }) => {
   await onboardHigherGrade(page);
-  await page.getByRole("link", { name: "目标诊断" }).click();
+  await page.getByRole("link", { name: "目标诊断", exact: true }).click();
   await page.getByRole("button", { name: "生成成长路线图" }).click();
   await page.getByRole("link", { name: "查看已生成计划" }).click();
   await page.getByLabel("这周想推进的一件事").fill("完成一次行业岗位分析");
-  await page.getByRole("button", { name: "加入计划" }).click();
+  await page.getByRole("button", { name: "加入行动" }).click();
   await expect(page.getByText("完成一次行业岗位分析")).toBeVisible();
   await page.reload();
   await expect(page.getByText("完成一次行业岗位分析")).toBeVisible();
 });
 
-test("route guards, 404 and AI fallback behave safely", async ({ page, request }) => {
+test("route guards, 404 and AI fallback behave safely", async ({ page, request, baseURL }) => {
   await clearLocalCareerData(page);
   await page.goto("/student/matching");
   await expect(page).toHaveURL(/\/login\?next=%2Fstudent%2Fmatching$/);
   await page.goto("/a-page-that-does-not-exist");
   await expect(page.getByRole("heading", { name: "这里没有你要找的页面。" })).toBeVisible();
 
-  const health = await request.get("http://127.0.0.1:8787/healthz");
+  const apiBase = `${baseURL}/api`;
+  const health = await request.get(`${apiBase}/healthz`);
   expect(health.ok()).toBeTruthy();
-  expect(await health.json()).toMatchObject({ status: "ok", provider: "deepseek" });
-  const coach = await request.post("http://127.0.0.1:8787/coach", { data: { profile: {} } });
+  expect(await health.json()).toMatchObject({
+    status: "ok",
+    provider: "deepseek",
+    schemaVersion: 8,
+    registrationMode: "open",
+    capabilities: expect.arrayContaining(["seven-dimension-ability-profile", "participation-evidence-review", "anonymous-cohort-insights"]),
+  });
+  const coach = await request.post(`${apiBase}/coach`, { data: { profile: {} } });
   expect([200, 503]).toContain(coach.status());
-  const directions = await request.post("http://127.0.0.1:8787/planning/directions", { data: { profile: {} } });
+  const directions = await request.post(`${apiBase}/planning/directions`, { data: { profile: {} } });
   expect([200, 503]).toContain(directions.status());
 });
 
@@ -112,7 +119,7 @@ test("DeepSeek planning flow creates candidates and saves a personalized plan", 
 test("core workspaces avoid horizontal overflow on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await onboardHigherGrade(page);
-  for (const path of ["/student/home", "/student/matching", "/student/ai-planning", "/student/roadmap", "/teacher/dashboard"]) {
+  for (const path of ["/student/home", "/student/matching", "/student/opportunities", "/student/abilities", "/student/ai-planning", "/student/roadmap"]) {
     await page.goto(path);
     await expect(page.locator("main")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), path).toBeTruthy();
@@ -121,7 +128,7 @@ test("core workspaces avoid horizontal overflow on mobile", async ({ page }) => 
 
 test("job search exposes a clear empty state", async ({ page }) => {
   await onboardHigherGrade(page);
-  await page.getByRole("link", { name: "目标诊断" }).click();
+  await page.getByRole("link", { name: "目标诊断", exact: true }).click();
   await page.getByLabel("行业场景").selectOption("教育科技");
   await expect(page.getByRole("button", { name: /教育科技产品经理/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /AI 应用开发工程师/ })).toHaveCount(0);
@@ -131,22 +138,11 @@ test("job search exposes a clear empty state", async ({ page }) => {
   await expect(page.getByText("3 个结果")).toBeVisible();
 });
 
-test("teacher workspace keeps teacher navigation after student onboarding", async ({ page }) => {
+test("student onboarding never grants teacher resource permissions", async ({ page }) => {
   await onboardHigherGrade(page);
   await page.goto("/teacher/dashboard");
-  await expect(page.getByRole("link", { name: "模拟洞察" })).toBeVisible();
-  await expect(page.getByText("教师演示")).toBeVisible();
-  await expect(page.getByRole("link", { name: "工作台" })).toHaveCount(0);
-});
-
-test("teacher empty filters recover without generating fake advice", async ({ page }) => {
-  await page.goto("/teacher/dashboard");
-  await page.getByLabel("阶段").selectOption("低年级");
-  await page.getByLabel("专业").selectOption("数据科学与大数据技术");
-  await expect(page.getByText("没有符合筛选条件的模拟记录。")).toBeVisible();
-  await expect(page.getByText(/围绕“暂无”/)).toHaveCount(0);
-  await page.getByRole("button", { name: "清除筛选" }).click();
-  await expect(page.getByText("9", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/student\/home$/);
+  await expect(page.getByRole("link", { name: "试点工作台" })).toHaveCount(0);
 });
 
 test("partial legacy browser data migrates into a usable profile", async ({ page }) => {
@@ -162,8 +158,8 @@ test("partial legacy browser data migrates into a usable profile", async ({ page
     }));
   });
   await page.goto("/student/home");
-  await expect(page.getByRole("heading", { name: /你好/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /今天，先推进/ })).toBeVisible();
   await expect(page.getByText(/通信工程/).first()).toBeVisible();
-  await page.getByRole("link", { name: "目标诊断" }).click();
+  await page.getByRole("link", { name: "目标诊断", exact: true }).click();
   await expect(page.getByRole("heading", { name: "选择一个想靠近的岗位" })).toBeVisible();
 });

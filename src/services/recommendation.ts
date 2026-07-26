@@ -126,20 +126,20 @@ export function buildExplorationTasks(direction: Direction | undefined): ActionT
 
 export function mapResearchEvidence(outcomes: ResearchOutcome[]): { scores: AbilityScores; evidence: string[] } {
   const scores: AbilityScores = {
-    professionalFoundation: 62,
-    programming: 58,
-    dataAnalysis: 58,
-    projectExperience: 60,
-    communication: 58,
-    industryKnowledge: 55,
-    careerPlanning: 55,
+    communicationCollaboration: 55,
+    innovativeThinking: 58,
+    professionalSkills: 62,
+    digitalLiteracy: 58,
+    responsibility: 58,
+    continuousLearning: 60,
+    resilience: 55,
   };
   const evidence: string[] = [];
   const boosts: Record<ResearchOutcome["type"], Partial<Record<AbilityKey, number>>> = {
-    paper: { professionalFoundation: 12, dataAnalysis: 8, communication: 5 },
-    patent: { programming: 8, projectExperience: 10, industryKnowledge: 8 },
-    project: { projectExperience: 12, communication: 8, careerPlanning: 4 },
-    competition: { programming: 6, dataAnalysis: 6, communication: 6, careerPlanning: 5 },
+    paper: { professionalSkills: 12, innovativeThinking: 8, continuousLearning: 7 },
+    patent: { innovativeThinking: 12, professionalSkills: 8, responsibility: 6 },
+    project: { communicationCollaboration: 8, professionalSkills: 8, responsibility: 10 },
+    competition: { communicationCollaboration: 6, digitalLiteracy: 6, resilience: 8, responsibility: 5 },
   };
 
   outcomes.forEach((outcome) => {

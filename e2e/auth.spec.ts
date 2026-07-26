@@ -14,35 +14,36 @@ test("account screens keep technical policy copy out of the primary experience",
   await expect(page.getByRole("heading", { name: "完善学习背景" })).toBeVisible();
 });
 
-test("account API persists profile and career state behind an HttpOnly session", async ({ request }) => {
+test("account API persists profile and career state behind an HttpOnly session", async ({ request, baseURL }) => {
+  const apiBase = `${baseURL}/api`;
   const email = `student-${Date.now()}@ynu.edu.cn`;
-  const register = await request.post("http://127.0.0.1:8787/auth/register", {
+  const register = await request.post(`${apiBase}/auth/register`, {
     data: { email, password: "career-plan-2026", displayName: "云同学" },
   });
   expect(register.status()).toBe(201);
   expect((await register.json()).user).toMatchObject({ email, displayName: "云同学" });
   expect(register.headers()["set-cookie"]).toContain("HttpOnly");
 
-  const session = await request.get("http://127.0.0.1:8787/auth/session");
+  const session = await request.get(`${apiBase}/auth/session`);
   expect(session.status()).toBe(200);
   expect((await session.json()).user.email).toBe(email);
 
-  const profile = await request.patch("http://127.0.0.1:8787/me/profile", {
+  const profile = await request.patch(`${apiBase}/me/profile`, {
     data: { university: "云南大学", college: "软件学院", major: "软件工程", grade: 3, bio: "关注数据产品与人工智能" },
   });
   expect(profile.status()).toBe(200);
   expect((await profile.json()).profile).toMatchObject({ university: "云南大学", major: "软件工程", grade: 3 });
 
-  const saveState = await request.put("http://127.0.0.1:8787/me/career-state", {
+  const saveState = await request.put(`${apiBase}/me/career-state`, {
     data: { state: { hasOnboarded: true, selectedJobId: "data-analyst" } },
   });
   expect(saveState.status()).toBe(200);
-  const state = await request.get("http://127.0.0.1:8787/me/career-state");
+  const state = await request.get(`${apiBase}/me/career-state`);
   expect(await state.json()).toMatchObject({ state: { hasOnboarded: true, selectedJobId: "data-analyst" } });
 
-  const logout = await request.post("http://127.0.0.1:8787/auth/logout", { data: {} });
+  const logout = await request.post(`${apiBase}/auth/logout`, { data: {} });
   expect(logout.status()).toBe(200);
-  expect((await request.get("http://127.0.0.1:8787/auth/session")).status()).toBe(401);
+  expect((await request.get(`${apiBase}/auth/session`)).status()).toBe(401);
 });
 
 test("student registers, completes onboarding, edits profile and returns after login", async ({ page }) => {

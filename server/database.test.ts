@@ -1,5 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
+import Database from "better-sqlite3";
 import { createDatabase } from "./database.mjs";
 
 describe("SQLite account database", () => {
@@ -35,5 +39,26 @@ describe("SQLite account database", () => {
     expect(database.getProfile("user-2")).toBeNull();
     expect(database.getCareerState("user-2")).toBeNull();
     database.close();
+  });
+
+  it("creates and verifies a recoverable backup before migrating an existing database", () => {
+    const directory = mkdtempSync(resolve(tmpdir(), "career-schema-"));
+    const path = resolve(directory, "career.db");
+    try {
+      const initial = createDatabase(path);
+      initial.createUser({ id: "user-1", email: "student@ynu.edu.cn", passwordHash: "hash", displayName: "小云", createdAt: "2026-07-24T00:00:00.000Z" });
+      initial.close();
+      const legacy = new Database(path);
+      legacy.exec("DELETE FROM schema_migrations");
+      legacy.close();
+
+      const migrated = createDatabase(path);
+      expect(migrated.schemaVersion).toBe(8);
+      expect(migrated.findUserByEmail("student@ynu.edu.cn")).toMatchObject({ id: "user-1" });
+      migrated.close();
+      expect(existsSync(`${path}.pre-schema-8.bak`)).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

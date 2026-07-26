@@ -4,6 +4,10 @@ import { createAccountService } from "./account-service.mjs";
 import { handleAccountRequest } from "./account-http.mjs";
 import { buildCoachRequest, parseCoachResponse, sanitizeCoachInput } from "./coach.mjs";
 import { createDatabase } from "./database.mjs";
+import { handleOpportunityRequest, isOpportunityPath } from "./opportunity-http.mjs";
+import { createOpportunityService } from "./opportunity-service.mjs";
+import { handlePilotRequest, isPilotPath } from "./pilot-http.mjs";
+import { createPilotService } from "./pilot-service.mjs";
 import { createRateLimiter } from "./rate-limit.mjs";
 import {
   buildActionPlanRequest,
@@ -21,13 +25,25 @@ const model = ["deepseek-v4-flash", "deepseek-v4-pro"].includes(process.env.DEEP
 const baseUrl = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
 const databasePath = process.env.DATABASE_PATH || resolve("data", "career.db");
 const database = createDatabase(databasePath);
-const accountService = createAccountService(database);
+const pilotService = createPilotService(database);
+const accountService = createAccountService(database, {
+  teacherEmails: process.env.CAREER_TEACHER_EMAILS || "",
+  invitedEmails: process.env.CAREER_INVITED_EMAILS || "",
+  registrationMode: process.env.REGISTRATION_MODE || (process.env.NODE_ENV === "production" ? "invite" : "open"),
+  permissionResolver: pilotService.permissionsFor,
+});
+const opportunityService = createOpportunityService(database, { pilotService });
 const aiRateLimiter = createRateLimiter({ limit: 12, windowMs: 60_000 });
 const authRateLimiter = createRateLimiter({ limit: 30, windowMs: 10 * 60_000 });
 
 function sendJson(response, status, body, extraHeaders = {}) {
   response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", ...extraHeaders });
   response.end(JSON.stringify(body));
+}
+
+function sendRaw(response, status, body, contentType, extraHeaders = {}) {
+  response.writeHead(status, { "Content-Type": contentType, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", ...extraHeaders });
+  response.end(body);
 }
 
 function clientAddress(request) {
@@ -118,10 +134,13 @@ const server = http.createServer(async (request, response) => {
       model,
       ai: apiKey ? "ready" : "not_configured",
       database: "ready",
-      capabilities: ["accounts", "profiles", "career-state-sync", "coach", "direction-candidates", "personalized-action-plan"],
+      schemaVersion: database.schemaVersion,
+      identityProvider: process.env.IDENTITY_PROVIDER || "local",
+      registrationMode: process.env.REGISTRATION_MODE || (process.env.NODE_ENV === "production" ? "invite" : "open"),
+      capabilities: ["accounts", "profiles", "career-state-sync", "seven-dimension-ability-profile", "authoritative-actions", "official-resource-governance", "participation-evidence-review", "notifications", "anonymous-cohort-insights", "coach", "direction-candidates", "personalized-action-plan"],
     });
   }
-  if (url.pathname.startsWith("/auth/") || url.pathname.startsWith("/me/")) {
+  if (url.pathname.startsWith("/auth/") || ["/me/profile", "/me/career-state"].includes(url.pathname)) {
     try {
       if (request.method === "POST" && ["/auth/register", "/auth/login"].includes(url.pathname)) {
         const limitResult = authRateLimiter.consume(clientAddress(request));
@@ -144,12 +163,36 @@ const server = http.createServer(async (request, response) => {
       return sendJson(response, status, { error: code, message: status === 400 ? "请求数据格式不正确。" : "服务暂时不可用。" });
     }
   }
+  if (isOpportunityPath(url.pathname)) {
+    try {
+      const hasBody = ["POST", "PATCH"].includes(request.method || "");
+      const body = hasBody ? await readJson(request, 32_000) : undefined;
+      const result = handleOpportunityRequest({ method: request.method || "GET", path: url.pathname, headers: request.headers, body }, accountService, opportunityService);
+      if (result.handled) return sendJson(response, result.status, result.body, result.headers);
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "invalid_request";
+      return sendJson(response, ["body_too_large", "invalid_json"].includes(code) ? 400 : 500, { error: code, message: "请求数据格式不正确。" });
+    }
+  }
+  if (isPilotPath(url.pathname)) {
+    try {
+      const hasBody = ["POST", "PATCH"].includes(request.method || "");
+      const body = hasBody ? await readJson(request, 64_000) : undefined;
+      const result = handlePilotRequest({ method: request.method || "GET", path: url.pathname, headers: request.headers, body }, accountService, pilotService);
+      if (result.handled) return result.raw
+        ? sendRaw(response, result.status, result.body, result.contentType, result.headers)
+        : sendJson(response, result.status, result.body, result.headers);
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "invalid_request";
+      return sendJson(response, ["body_too_large", "invalid_json"].includes(code) ? 400 : 500, { error: code, message: "请求数据格式不正确。" });
+    }
+  }
   // Public callers use /api/*. Both the Vite dev proxy and Nginx strip
   // that public prefix before forwarding to this internal-only service.
   const handlers = {
-    "/coach": { key: "advice", run: getAdvice },
-    "/planning/directions": { key: "result", run: getDirections },
-    "/planning/actions": { key: "result", run: getActionPlan },
+    "/coach": { key: "advice", run: getAdvice, promptVersion: "coach-v1" },
+    "/planning/directions": { key: "result", run: getDirections, promptVersion: "direction-candidates-v2" },
+    "/planning/actions": { key: "result", run: getActionPlan, promptVersion: "action-plan-v2" },
   };
   const handler = handlers[url.pathname];
   if (request.method === "POST" && handler) {
@@ -158,7 +201,17 @@ const server = http.createServer(async (request, response) => {
     if (!String(request.headers["content-type"] || "").includes("application/json")) return sendJson(response, 415, { error: "json_required" });
     try {
       const result = await handler.run(await readJson(request));
-      return sendJson(response, 200, { [handler.key]: result, meta: { provider: "deepseek", model, generatedAt: new Date().toISOString() } });
+      return sendJson(response, 200, {
+        [handler.key]: result,
+        meta: {
+          provider: "deepseek",
+          model,
+          generatedAt: new Date().toISOString(),
+          promptVersion: handler.promptVersion,
+          ruleVersion: "career-rules-0.7.0",
+          resourceIds: [],
+        },
+      });
     } catch (error) {
       const failure = errorResponse(error);
       return sendJson(response, failure.status, failure.body);

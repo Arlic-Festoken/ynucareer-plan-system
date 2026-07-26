@@ -1,17 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { onboardRole, registerAndOpenOnboarding } from "./helpers";
 
-test("landing previews an evidence-building task instead of a research interview", async ({ page }) => {
+test("landing previews a verified campus action instead of a research interview", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("完成一份岗位能力对照")).toBeVisible();
+  await expect(page.getByText("加入一项校内数据实践")).toBeVisible();
   await expect(page.locator("main")).not.toContainText(/岗位访谈|准备 3 个访谈问题|联系 1 位相关从业者/);
 });
 
 test("low-grade student completes an exploration action", async ({ page }) => {
   await onboardRole(page, "低年级学生");
-  await expect(page.getByRole("heading", { name: /你好/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /今天，先推进/ })).toBeVisible();
   await expect(page.getByText("AI 未配置，规则计划可用。")).toBeVisible();
-  await page.getByRole("link", { name: "开始生成建议" }).click();
+  await page.getByRole("link", { name: "探索方向" }).click();
   await expect(page.getByRole("heading", { name: "先回答一个真实的问题，再决定是否走远。" })).toBeVisible();
   await page.getByRole("button", { name: "方向设计" }).click();
   await page.getByRole("button", { name: /AI 应用开发/ }).click();
@@ -19,21 +19,21 @@ test("low-grade student completes an exploration action", async ({ page }) => {
   await page.getByRole("button", { name: "生成探索行动计划" }).click();
   await expect(page.getByText("完成一个 API 调用小作品")).toBeVisible();
   await page.getByRole("link", { name: "工作台" }).click();
-  await page.getByRole("link", { name: "继续我的行动" }).click();
+  await page.getByRole("link", { name: "探索方向" }).click();
   await expect(page).toHaveURL(/\/student\/awakening$/);
   await expect(page.getByText("完成一个 API 调用小作品")).toBeVisible();
   await page.getByRole("link", { name: "行动计划" }).click();
-  await expect(page.getByRole("heading", { name: "让计划进入真实的时间里。" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "让计划进入真实的时间。" })).toBeVisible();
   await expect(page.getByText("完成一个 API 调用小作品")).toBeVisible();
   await page.getByLabel("这周想推进的一件事").fill("完成一次实验室开放日观察记录");
-  await page.getByRole("button", { name: "加入计划" }).click();
+  await page.getByRole("button", { name: "加入行动" }).click();
   await page.reload();
   await expect(page.getByText("完成一次实验室开放日观察记录")).toBeVisible();
 });
 
-test("higher-grade student completes and reflects on a persisted action", async ({ page }) => {
+test("higher-grade student advances a server-authoritative action and keeps it after reload", async ({ page }) => {
   await onboardRole(page, "高年级学生");
-  await page.getByRole("link", { name: "开始生成建议" }).click();
+  await page.getByRole("link", { name: "目标诊断", exact: true }).click();
   await expect(page.getByRole("heading", { name: "选择一个想靠近的岗位" })).toBeVisible();
   await page.getByPlaceholder("搜索岗位、行业或工作内容").fill("教育");
   await expect(page.getByRole("button", { name: /教育科技产品经理/ })).toBeVisible();
@@ -41,21 +41,20 @@ test("higher-grade student completes and reflects on a persisted action", async 
   await page.getByLabel("清空岗位搜索").click();
   await page.getByRole("button", { name: "生成成长路线图" }).click();
   await page.getByRole("link", { name: "查看已生成计划" }).click();
-  const firstToggle = page.locator(".task-row .task-toggle").first();
+  const firstAction = page.locator(".action-item").first();
+  const firstTitle = await firstAction.locator("strong").textContent();
+  const firstToggle = firstAction.locator(".task-toggle");
   await firstToggle.click();
-  await expect(page.locator(".task-row").first()).toHaveClass(/is-complete/);
-  await page.getByRole("button", { name: "记录复盘" }).click();
-  await page.getByLabel("这一步让你确认或改变了什么？").fill("我已经知道下一步要补齐项目经验。");
-  await page.getByRole("button", { name: "保存复盘" }).click();
-  await expect(page.getByText("我已经知道下一步要补齐项目经验。")).toBeVisible();
+  await expect(firstAction).toHaveClass(/is-in_progress/);
+  await firstToggle.click();
+  await expect(firstAction).toHaveClass(/is-completed/);
   await page.reload();
-  await expect(page.locator(".task-row").first()).toHaveClass(/is-complete/);
-  await expect(page.getByText("我已经知道下一步要补齐项目经验。")).toBeVisible();
-  await page.getByRole("link", { name: "目标诊断" }).click();
+  const persistedAction = page.locator(".action-item").filter({ hasText: firstTitle || "" });
+  await expect(persistedAction).toHaveClass(/is-completed/);
+  await page.getByRole("link", { name: "目标诊断", exact: true }).click();
   await page.getByRole("button", { name: "生成成长路线图" }).click();
   await page.getByRole("link", { name: "查看已生成计划" }).click();
-  await expect(page.locator(".task-row").first()).toHaveClass(/is-complete/);
-  await expect(page.getByText("我已经知道下一步要补齐项目经验。")).toBeVisible();
+  await expect(page.locator(".action-item").filter({ hasText: firstTitle || "" })).toHaveClass(/is-completed/);
 });
 
 test("graduate can build dual-lane planning", async ({ page }) => {
@@ -69,11 +68,9 @@ test("graduate can build dual-lane planning", async ({ page }) => {
   await expect(page.getByText("职业线")).toBeVisible();
 });
 
-test("teacher can filter the anonymized cohort sample", async ({ page }) => {
+test("teacher resource workspace requires a configured staff account", async ({ page }) => {
   await page.goto("/teacher/dashboard");
-  await expect(page.getByText("教师演示")).toBeVisible();
-  await page.getByLabel("阶段").selectOption("研究生");
-  await expect(page.getByText("模拟样本", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/login\?next=%2Fteacher%2Fdashboard$/);
 });
 
 test("mobile landing and onboarding have no horizontal overflow", async ({ page }) => {

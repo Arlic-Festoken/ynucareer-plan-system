@@ -20,6 +20,7 @@ function failure(error) {
     display_name_required: "请输入昵称。",
     email_exists: "该邮箱已注册，请直接登录。",
     invalid_credentials: "邮箱或密码不正确。",
+    registration_invite_required: "当前为校内邀请制试点，请使用已获邀请的邮箱注册。",
     invalid_career_state: "生涯数据格式不正确。",
     career_state_too_large: "生涯数据超过同步上限。",
   };

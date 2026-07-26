@@ -1,4 +1,5 @@
 import type { CareerProfile } from "../domain";
+import { apiUrl } from "./base";
 
 export type CoachAdvice = {
   headline: string;
@@ -17,7 +18,7 @@ export type CoachStatus = "ready" | "not_configured" | "unavailable";
 
 export async function getCoachStatus(signal?: AbortSignal): Promise<CoachStatus> {
   try {
-    const response = await fetch("/api/healthz", { signal });
+    const response = await fetch(apiUrl("/healthz"), { signal });
     if (!response.ok) return "unavailable";
     const data = await response.json() as { ai?: string };
     return data.ai === "ready" ? "ready" : "not_configured";
@@ -27,7 +28,7 @@ export async function getCoachStatus(signal?: AbortSignal): Promise<CoachStatus>
 }
 
 export async function requestCoach(input: CoachInput): Promise<CoachAdvice> {
-  const response = await fetch("/api/coach", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+  const response = await fetch(apiUrl("/coach"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
   const data = await response.json() as { advice?: CoachAdvice; message?: string };
   if (!response.ok || !data.advice) throw new Error(data.message || "AI 服务暂时不可用，请稍后重试。");
   return data.advice;

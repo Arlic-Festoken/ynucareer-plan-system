@@ -1,4 +1,5 @@
-import type { AiActionPlan, AiDirectionCandidate, AiDirectionResult, CareerProfile } from "../domain";
+import type { AiActionPlan, AiDirectionCandidate, AiDirectionResult, CareerProfile, GenerationTrace } from "../domain";
+import { apiUrl } from "./base";
 
 export type PlanningContext = {
   profile: CareerProfile;
@@ -16,10 +17,17 @@ export type ActionPlanInput = PlanningContext & {
 type ApiResponse<T> = {
   result?: T;
   message?: string;
-  meta?: { provider: string; model: string; generatedAt: string };
+  meta?: {
+    provider: string;
+    model: string;
+    generatedAt: string;
+    promptVersion?: string;
+    ruleVersion?: string;
+    resourceIds?: string[];
+  };
 };
 
-async function request<T>(path: string, input: unknown): Promise<{ result: T; generatedAt: string }> {
+async function request<T>(path: string, input: unknown): Promise<{ result: T; generatedAt: string; trace: GenerationTrace }> {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 45_000);
   try {
@@ -31,7 +39,20 @@ async function request<T>(path: string, input: unknown): Promise<{ result: T; ge
     });
     const data = await response.json() as ApiResponse<T>;
     if (!response.ok || !data.result) throw new Error(data.message || "AI 规划暂时不可用，请稍后重试。");
-    return { result: data.result, generatedAt: data.meta?.generatedAt || new Date().toISOString() };
+    const generatedAt = data.meta?.generatedAt || new Date().toISOString();
+    return {
+      result: data.result,
+      generatedAt,
+      trace: {
+        generator: "ai",
+        promptVersion: data.meta?.promptVersion || "unknown",
+        ruleVersion: data.meta?.ruleVersion || "career-rules-0.7.0",
+        model: data.meta?.model || "unknown",
+        generatedAt,
+        resourceIds: Array.isArray(data.meta?.resourceIds) ? data.meta.resourceIds : [],
+        autonomous: true,
+      },
+    };
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw new Error("AI 生成超时，请稍后重试。");
     throw error;
@@ -41,9 +62,9 @@ async function request<T>(path: string, input: unknown): Promise<{ result: T; ge
 }
 
 export async function requestDirectionCandidates(input: PlanningContext) {
-  return request<AiDirectionResult>("/api/planning/directions", input);
+  return request<AiDirectionResult>(apiUrl("/planning/directions"), input);
 }
 
 export async function requestPersonalizedPlan(input: ActionPlanInput) {
-  return request<AiActionPlan>("/api/planning/actions", input);
+  return request<AiActionPlan>(apiUrl("/planning/actions"), input);
 }

@@ -14,7 +14,7 @@ const profile = {
   targetPath: "employment",
   interests: ["人工智能", "数据与商业"],
   values: ["创造价值", "技术精进"],
-  abilityScores: { programming: 72, dataAnalysis: 68 },
+  abilityScores: { professionalSkills: 72, digitalLiteracy: 68 },
 };
 
 describe("DeepSeek planning boundary", () => {
@@ -28,7 +28,7 @@ describe("DeepSeek planning boundary", () => {
     });
     expect(clean.strengthEvidence.length).toBe(600);
     expect(clean.timeBudgetHours).toBe(30);
-    expect(clean.profile.abilityScores.programming).toBe(72);
+    expect(clean.profile.abilityScores.professionalSkills).toBe(72);
     expect(buildDirectionRequest(clean, "deepseek-v4-flash")).toMatchObject({
       model: "deepseek-v4-flash",
       response_format: { type: "json_object" },

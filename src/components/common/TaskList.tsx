@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, FileText, Save } from "lucide-react";
+import { CheckCircle2, Circle, ExternalLink, FileText, Save } from "lucide-react";
 import { useState } from "react";
 import type { ActionTask } from "../../domain";
 
@@ -27,6 +27,7 @@ export default function TaskList({ tasks, onToggle, onSaveReflection, emptyMessa
       <div className="task-row-copy">
         <span className="task-row-meta">{task.semester} · {categoryLabels[task.category]} · {task.priority === "high" ? "优先完成" : task.priority === "medium" ? "持续推进" : "保持关注"}</span>
         <strong>{task.title}</strong><small>{task.detail}</small>
+        {task.opportunityTitle && <span className="task-opportunity">校内资源 · {task.opportunityTitle}{task.sourceUrl && <a href={task.sourceUrl} rel="noreferrer" target="_blank">查看来源 <ExternalLink size={12} /></a>}</span>}
         {task.completed && task.reflection && <p className="task-reflection"><FileText size={14} /> {task.reflection}</p>}
       </div>
       {task.completed && onSaveReflection && <button className="task-reflection-trigger" onClick={() => { setEditingTaskId(task.id); setDraft(task.reflection ?? ""); }} type="button">{task.reflection ? "编辑复盘" : "记录复盘"}</button>}

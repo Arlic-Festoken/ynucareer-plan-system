@@ -1,9 +1,12 @@
-import type { CareerStateData } from "../domain";
+import type { CareerStateData, Permission } from "../domain";
+import { apiUrl } from "./base";
 
 export type AccountUser = {
   id: string;
   email: string;
   displayName: string;
+  role: "student" | "teacher";
+  permissions: Permission[];
   createdAt: string;
   updatedAt: string;
 };
@@ -18,7 +21,7 @@ export type AccountProfile = {
 };
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`/api${path}`, {
+  const response = await fetch(apiUrl(path), {
     ...options,
     credentials: "same-origin",
     headers: options?.body ? { "Content-Type": "application/json", ...options.headers } : options?.headers,

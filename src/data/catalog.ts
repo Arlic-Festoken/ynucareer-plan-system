@@ -8,23 +8,23 @@ import type {
 } from "../domain";
 
 export const abilityLabels: Record<AbilityKey, string> = {
-  professionalFoundation: "专业基础",
-  programming: "技术实现",
-  dataAnalysis: "数据分析",
-  projectExperience: "项目经验",
-  communication: "沟通表达",
-  industryKnowledge: "行业认知",
-  careerPlanning: "生涯规划",
+  communicationCollaboration: "沟通协作",
+  innovativeThinking: "创新思维",
+  professionalSkills: "专业技能",
+  digitalLiteracy: "数字素养",
+  responsibility: "责任担当",
+  continuousLearning: "持续学习",
+  resilience: "心理韧性",
 };
 
 export const blankAbilities: AbilityScores = {
-  professionalFoundation: 55,
-  programming: 50,
-  dataAnalysis: 50,
-  projectExperience: 45,
-  communication: 55,
-  industryKnowledge: 45,
-  careerPlanning: 45,
+  communicationCollaboration: 55,
+  innovativeThinking: 50,
+  professionalSkills: 55,
+  digitalLiteracy: 55,
+  responsibility: 55,
+  continuousLearning: 55,
+  resilience: 50,
 };
 
 export const majors = ["计算机科学与技术", "通信工程", "数据科学与大数据技术", "教育技术学"];
@@ -80,8 +80,8 @@ export const jobs: JobProfile[] = [
     title: "数据分析师",
     industry: "数字经济 / 教育科技 / 智慧医疗",
     description: "负责数据清洗、指标体系建设、可视化分析与业务决策支持。",
-    requiredAbilities: { professionalFoundation: 70, programming: 68, dataAnalysis: 82, projectExperience: 76, communication: 72, industryKnowledge: 68, careerPlanning: 65 },
-    weights: { dataAnalysis: 1.5, projectExperience: 1.35, communication: 1.15 },
+    requiredAbilities: { communicationCollaboration: 72, innovativeThinking: 68, professionalSkills: 76, digitalLiteracy: 84, responsibility: 72, continuousLearning: 70, resilience: 64 },
+    weights: { digitalLiteracy: 1.5, professionalSkills: 1.35, communicationCollaboration: 1.15 },
     resources: ["SQL 进阶练习", "数据可视化课程", "校园调研项目"],
   },
   {
@@ -89,8 +89,8 @@ export const jobs: JobProfile[] = [
     title: "AI 应用开发工程师",
     industry: "人工智能 / 智能制造 / 智慧医疗",
     description: "将模型能力接入真实业务场景，完成应用开发、评估与产品化。",
-    requiredAbilities: { professionalFoundation: 76, programming: 88, dataAnalysis: 74, projectExperience: 84, communication: 68, industryKnowledge: 72, careerPlanning: 62 },
-    weights: { programming: 1.5, projectExperience: 1.45, professionalFoundation: 1.2 },
+    requiredAbilities: { communicationCollaboration: 68, innovativeThinking: 82, professionalSkills: 88, digitalLiteracy: 86, responsibility: 76, continuousLearning: 82, resilience: 70 },
+    weights: { professionalSkills: 1.5, innovativeThinking: 1.4, digitalLiteracy: 1.3 },
     resources: ["Python 工程化课程", "模型应用作品集", "开源项目协作"],
   },
   {
@@ -98,8 +98,8 @@ export const jobs: JobProfile[] = [
     title: "教育科技产品经理",
     industry: "教育科技 / 数字化服务",
     description: "洞察学习场景，设计数字产品并推动数据驱动的迭代。",
-    requiredAbilities: { professionalFoundation: 62, programming: 52, dataAnalysis: 70, projectExperience: 80, communication: 86, industryKnowledge: 78, careerPlanning: 72 },
-    weights: { communication: 1.45, projectExperience: 1.4, industryKnowledge: 1.3 },
+    requiredAbilities: { communicationCollaboration: 88, innovativeThinking: 78, professionalSkills: 66, digitalLiteracy: 72, responsibility: 82, continuousLearning: 76, resilience: 72 },
+    weights: { communicationCollaboration: 1.5, responsibility: 1.35, innovativeThinking: 1.25 },
     resources: ["用户研究入门", "产品设计工作坊", "教育场景实践"],
   },
 ];

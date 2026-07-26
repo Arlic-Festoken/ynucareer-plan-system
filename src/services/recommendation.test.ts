@@ -11,7 +11,7 @@ const profile: CareerProfile = {
   targetPath: "employment",
   interests: ["人工智能", "数据与商业"],
   values: ["技术精进", "创造价值"],
-  abilityScores: { ...blankAbilities, programming: 78, projectExperience: 52 },
+  abilityScores: { ...blankAbilities, professionalSkills: 78, responsibility: 52 },
 };
 
 describe("recommendation service", () => {
@@ -40,7 +40,7 @@ describe("recommendation service", () => {
 
   it("maps research outcomes into seven-dimensional evidence", () => {
     const result = mapResearchEvidence([{ id: "paper-1", type: "paper", title: "学习行为预测研究" }]);
-    expect(result.scores.professionalFoundation).toBeGreaterThan(62);
+    expect(result.scores.professionalSkills).toBeGreaterThan(62);
     expect(result.evidence[0]).toContain("学习行为预测研究");
   });
 

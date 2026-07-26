@@ -3,9 +3,9 @@ import { buildCoachRequest, parseCoachResponse, sanitizeCoachInput } from "./coa
 
 describe("DeepSeek coach boundary", () => {
   it("bounds untrusted browser input before it reaches the provider", () => {
-    const input = sanitizeCoachInput({ profile: { role: "junior", grade: 3, major: "数据科学", interests: ["数据与商业"], values: ["创造价值"], abilityScores: { programming: 72 } }, nextAction: { title: "完成一个项目", detail: "做一个真实作品" }, question: "请帮我安排本周" });
+    const input = sanitizeCoachInput({ profile: { role: "junior", grade: 3, major: "数据科学", interests: ["数据与商业"], values: ["创造价值"], abilityScores: { professionalSkills: 72 } }, nextAction: { title: "完成一个项目", detail: "做一个真实作品" }, question: "请帮我安排本周" });
     expect(input.profile.role).toBe("junior");
-    expect(input.profile.abilityScores.programming).toBe(72);
+    expect(input.profile.abilityScores.professionalSkills).toBe(72);
     expect(buildCoachRequest(input, "deepseek-v4-flash").response_format).toEqual({ type: "json_object" });
   });
 

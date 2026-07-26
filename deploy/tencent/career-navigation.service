@@ -1,0 +1,32 @@
+[Unit]
+Description=Career Navigation API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=career-nav
+Group=career-nav
+WorkingDirectory=/opt/career-navigation/current
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=8795
+Environment=DATABASE_PATH=/opt/career-navigation/shared/career.db
+Environment=COOKIE_SECURE=true
+Environment=DEEPSEEK_MODEL=deepseek-v4-flash
+EnvironmentFile=-/etc/career-navigation.env
+ExecStart=/usr/bin/node /opt/career-navigation/current/server/index.mjs
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=30
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/career-navigation/shared
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

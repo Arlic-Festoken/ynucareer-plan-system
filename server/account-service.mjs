@@ -7,12 +7,14 @@ function text(value, limit) {
   return typeof value === "string" ? value.trim().slice(0, limit) : "";
 }
 
-function safeUser(user) {
+function safeUser(user, permissionResolver) {
   if (!user) return null;
   return {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
+    role: user.role === "teacher" ? "teacher" : "student",
+    permissions: typeof permissionResolver === "function" ? permissionResolver(user) : [],
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -29,10 +31,20 @@ function sanitizeProfile(input) {
   };
 }
 
+function teacherEmailSet(value) {
+  const values = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
+  return new Set(values.map(normalizeEmail).filter(Boolean));
+}
+
 export function createAccountService(database, options = {}) {
   const now = options.now ?? (() => new Date());
   const randomId = options.randomId ?? (() => randomUUID());
   const randomToken = options.randomToken ?? (() => randomBytes(32).toString("base64url"));
+  const teacherEmails = teacherEmailSet(options.teacherEmails);
+  const invitedEmails = teacherEmailSet(options.invitedEmails);
+  const registrationMode = options.registrationMode === "invite" ? "invite" : "open";
+  const permissionResolver = options.permissionResolver;
+  const assignedRole = (email) => teacherEmails.has(normalizeEmail(email)) ? "teacher" : "student";
 
   function createSession(userId) {
     const createdAt = now();
@@ -51,26 +63,31 @@ export function createAccountService(database, options = {}) {
     async register(input) {
       const validation = validateRegistration(input);
       if (!validation.ok) throw new Error(validation.error);
+      if (registrationMode === "invite" && !teacherEmails.has(validation.value.email) && !invitedEmails.has(validation.value.email)) {
+        throw new Error("registration_invite_required");
+      }
       const createdAt = now().toISOString();
       const user = database.createUser({
         id: randomId(),
         email: validation.value.email,
         passwordHash: await hashPassword(validation.value.password),
         displayName: validation.value.displayName,
+        role: assignedRole(validation.value.email),
         createdAt,
       });
-      return { user: safeUser(user), ...createSession(user.id) };
+      return { user: safeUser(user, permissionResolver), ...createSession(user.id) };
     },
     async login(input) {
       const email = normalizeEmail(input?.email);
       const password = typeof input?.password === "string" ? input.password : "";
-      const user = database.findUserByEmail(email);
+      let user = database.findUserByEmail(email);
       if (!user || !(await verifyPassword(password, user.passwordHash))) throw new Error("invalid_credentials");
-      return { user: safeUser(user), ...createSession(user.id) };
+      if (teacherEmails.size && user.role !== assignedRole(user.email)) user = { ...database.updateUserRole(user.id, assignedRole(user.email), now().toISOString()), passwordHash: user.passwordHash };
+      return { user: safeUser(user, permissionResolver), ...createSession(user.id) };
     },
     authenticate(sessionToken) {
       if (!sessionToken) return null;
-      return safeUser(database.findSessionUser(hashSessionToken(sessionToken), now().toISOString()));
+      return safeUser(database.findSessionUser(hashSessionToken(sessionToken), now().toISOString()), permissionResolver);
     },
     logout(sessionToken) {
       if (sessionToken) database.deleteSession(hashSessionToken(sessionToken));

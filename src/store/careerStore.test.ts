@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { blankAbilities } from "../data/catalog";
-import { careerStateSnapshot, migrateCareerState, useCareerStore } from "./careerStore";
+import { careerStateSnapshot, migrateAbilityScores, migrateCareerState, useCareerStore } from "./careerStore";
 
 describe("career store", () => {
   it("persists onboarding data in the active state and can reset it", () => {
@@ -25,8 +25,8 @@ describe("career store", () => {
   it("deeply migrates partial local data without losing required defaults", () => {
     const migrated = migrateCareerState({ hasOnboarded: true, profile: { major: "通信工程", abilityScores: { programming: 81 } }, awakening: { activeStep: 4 }, research: { focus: "边缘智能" } });
     expect(migrated.profile.major).toBe("通信工程");
-    expect(migrated.profile.abilityScores.programming).toBe(81);
-    expect(migrated.profile.abilityScores.communication).toBe(blankAbilities.communication);
+    expect(migrated.profile.abilityScores.professionalSkills).toBeGreaterThan(blankAbilities.professionalSkills);
+    expect(migrated.profile.abilityScores.resilience).toBe(blankAbilities.resilience);
     expect(migrated.awakening.motivation.curiosity).toBe(3);
     expect(migrated.research.careerTasks).toEqual([]);
     expect(migrated.aiPlanning).toMatchObject({ timeBudgetHours: 6, horizonWeeks: 8, directionResult: null });
@@ -42,12 +42,31 @@ describe("career store", () => {
   it("replaces local data with a migrated account snapshot and exposes data without actions", () => {
     useCareerStore.getState().replaceCareerData({
       hasOnboarded: true,
-      profile: { id: "remote", role: "junior", grade: 3, major: "软件工程", targetPath: "employment", interests: ["人工智能"], values: ["技术精进"], abilityScores: { programming: 88 } },
+      profile: { id: "remote", role: "junior", grade: 3, major: "软件工程", targetPath: "employment", interests: ["人工智能"], values: ["技术精进"], abilityScores: { professionalSkills: 88 } },
     });
     const snapshot = careerStateSnapshot(useCareerStore.getState());
-    expect(snapshot.profile).toMatchObject({ id: "remote", major: "软件工程", abilityScores: { programming: 88 } });
-    expect(snapshot.profile.abilityScores.communication).toBe(blankAbilities.communication);
+    expect(snapshot.profile).toMatchObject({ id: "remote", major: "软件工程", abilityScores: { professionalSkills: 88 } });
+    expect(snapshot.profile.abilityScores.communicationCollaboration).toBe(blankAbilities.communicationCollaboration);
     expect(snapshot).not.toHaveProperty("resetDemo");
     expect(snapshot).not.toHaveProperty("replaceCareerData");
+  });
+
+  it("maps legacy technical scores into reviewable seven-dimensional self ratings", () => {
+    expect(migrateAbilityScores({
+      professionalFoundation: 70,
+      programming: 80,
+      dataAnalysis: 60,
+      projectExperience: 50,
+      communication: 90,
+      careerPlanning: 40,
+    })).toEqual({
+      communicationCollaboration: 90,
+      innovativeThinking: 55,
+      professionalSkills: 75,
+      digitalLiteracy: 70,
+      responsibility: 50,
+      continuousLearning: 40,
+      resilience: 50,
+    });
   });
 });
