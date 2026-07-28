@@ -65,6 +65,11 @@ page.on("console", (message) => {
 async function capture(name, path, options = {}) {
   await page.goto(`${baseURL}${path}`, { waitUntil: "networkidle" });
   if (options.zoom) await page.evaluate((zoom) => { document.body.style.zoom = String(zoom); }, options.zoom);
+  if (options.openFirstBlueprint) await page.locator(".action-blueprint").first().evaluate((details) => { details.open = true; });
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    window.scrollTo(0, 0);
+  });
   const metrics = await page.evaluate(() => ({
     path: location.pathname,
     width: window.innerWidth,
@@ -119,11 +124,18 @@ await page.getByRole("button", { name: "方向设计" }).click();
 await page.locator(".direction-option").first().click();
 await page.getByRole("button", { name: "行动创造" }).click();
 await page.getByRole("button", { name: "生成探索行动计划" }).click();
-await capture("05-explorer-roadmap-desktop", "/student/roadmap");
+await capture("05-explorer-roadmap-desktop", "/student/roadmap", { openFirstBlueprint: true });
 await page.setViewportSize({ width: 390, height: 844 });
 await capture("06-awakening-mobile", "/student/awakening");
-await capture("07-explorer-roadmap-mobile", "/student/roadmap");
+await capture("07-explorer-roadmap-mobile", "/student/roadmap", { openFirstBlueprint: true });
+await page.evaluate(() => localStorage.setItem("career-theme", "dark"));
+await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+await capture("07a-explorer-roadmap-dark-reduced-motion", "/student/roadmap", { openFirstBlueprint: true });
+await page.evaluate(() => localStorage.setItem("career-theme", "light"));
+await page.emulateMedia({ colorScheme: "light", reducedMotion: "no-preference" });
 await page.setViewportSize({ width: 1440, height: 1000 });
+await capture("07b-explorer-roadmap-200-percent-zoom", "/student/roadmap", { zoom: 2, openFirstBlueprint: true });
+await page.evaluate(() => { document.body.style.zoom = "1"; });
 
 await resetAndOnboard("高年级学生");
 await capture("08-student-home-desktop", "/student/home");
