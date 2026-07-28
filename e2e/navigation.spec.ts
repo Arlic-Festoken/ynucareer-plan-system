@@ -24,11 +24,23 @@ test("low-grade student completes an exploration action", async ({ page }) => {
   await expect(page.getByText("完成一个 API 调用小作品")).toBeVisible();
   await page.getByRole("link", { name: "行动计划" }).click();
   await expect(page.getByRole("heading", { name: "让计划进入真实的时间。" })).toBeVisible();
-  await expect(page.getByText("完成一个 API 调用小作品")).toBeVisible();
-  await page.getByLabel("这周想推进的一件事").fill("完成一次实验室开放日观察记录");
+  const generatedAction = page.locator(".action-item").filter({ hasText: "完成一个 API 调用小作品" });
+  await expect(generatedAction.locator(".action-item-title")).toHaveText("完成一个 API 调用小作品");
+  await expect(page.getByText("计划概览")).toBeVisible();
+  await expect(page.getByText("本周焦点")).toBeVisible();
+  await generatedAction.getByText("查看执行蓝图").click();
+  await expect(generatedAction.getByText("建议执行")).toBeVisible();
+  await expect(generatedAction.locator(".action-blueprint-steps li")).toHaveCount(3);
+
+  await page.getByLabel("行动名称").fill("完成一次实验室开放日观察记录");
+  await page.getByLabel("具体说明").fill("观察开放日中的三个真实问题，整理成一页场景记录。");
+  await page.getByLabel("行动类型").selectOption("practice");
+  await page.getByLabel("截止日期").fill("2026-08-15");
   await page.getByRole("button", { name: "加入行动" }).click();
   await page.reload();
-  await expect(page.getByText("完成一次实验室开放日观察记录")).toBeVisible();
+  const manualAction = page.locator(".action-item").filter({ hasText: "完成一次实验室开放日观察记录" });
+  await expect(manualAction).toContainText("观察开放日中的三个真实问题");
+  await expect(manualAction).toContainText("8月15日截止");
 });
 
 test("higher-grade student advances a server-authoritative action and keeps it after reload", async ({ page }) => {
@@ -42,7 +54,7 @@ test("higher-grade student advances a server-authoritative action and keeps it a
   await page.getByRole("button", { name: "生成成长路线图" }).click();
   await page.getByRole("link", { name: "查看已生成计划" }).click();
   const firstAction = page.locator(".action-item").first();
-  const firstTitle = await firstAction.locator("strong").textContent();
+  const firstTitle = await firstAction.locator(".action-item-title").textContent();
   const firstToggle = firstAction.locator(".task-toggle");
   await firstToggle.click();
   await expect(firstAction).toHaveClass(/is-in_progress/);
