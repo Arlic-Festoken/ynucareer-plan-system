@@ -26,11 +26,13 @@ test("roadmap supports custom actions and persists them", async ({ page }) => {
   await page.getByRole("link", { name: "目标诊断", exact: true }).click();
   await page.getByRole("button", { name: "生成成长路线图" }).click();
   await page.getByRole("link", { name: "查看已生成计划" }).click();
-  await page.getByLabel("这周想推进的一件事").fill("完成一次行业岗位分析");
+  await page.getByLabel("行动名称").fill("完成一次行业岗位分析");
+  await page.getByLabel("具体说明").fill("对照三个公开岗位描述，整理共同能力要求和当前差距。");
   await page.getByRole("button", { name: "加入行动" }).click();
-  await expect(page.getByText("完成一次行业岗位分析")).toBeVisible();
+  const customAction = page.locator(".action-item").filter({ hasText: "完成一次行业岗位分析" });
+  await expect(customAction.locator(".action-item-title")).toHaveText("完成一次行业岗位分析");
   await page.reload();
-  await expect(page.getByText("完成一次行业岗位分析")).toBeVisible();
+  await expect(customAction.locator(".action-item-title")).toHaveText("完成一次行业岗位分析");
 });
 
 test("route guards, 404 and AI fallback behave safely", async ({ page, request, baseURL }) => {
@@ -111,9 +113,10 @@ test("DeepSeek planning flow creates candidates and saves a personalized plan", 
   await expect(page.getByRole("heading", { name: "八周内完成一次学习产品数据分析方向验证。" })).toBeVisible();
   await page.getByRole("button", { name: "保存到行动计划" }).click();
   await page.getByRole("link", { name: /已保存，查看行动计划/ }).click();
-  await expect(page.getByText("定义一个学习产品问题")).toBeVisible();
+  const savedAction = page.locator(".action-item").filter({ hasText: "定义一个学习产品问题" });
+  await expect(savedAction.locator(".action-item-title")).toHaveText("定义一个学习产品问题");
   await page.reload();
-  await expect(page.getByText("定义一个学习产品问题")).toBeVisible();
+  await expect(savedAction.locator(".action-item-title")).toHaveText("定义一个学习产品问题");
 });
 
 test("core workspaces avoid horizontal overflow on mobile", async ({ page }) => {
