@@ -6,6 +6,7 @@ import { requestDirectionCandidates, requestPersonalizedPlan } from "../api/care
 import PageShell from "../components/common/PageShell";
 import TaskList from "../components/common/TaskList";
 import type { ActionTask, AiActionPlan, AiDirectionCandidate, GenerationTrace } from "../domain";
+import { mergeActionDetail } from "../services/actionPlan";
 import { preserveTaskProgress, recommendDirections } from "../services/recommendation";
 import { useCareerStore } from "../store/careerStore";
 
@@ -15,7 +16,7 @@ function toTasks(candidate: AiDirectionCandidate, tasks: AiActionPlan["tasks"], 
   return tasks.map((task, index) => ({
     id: `ai-plan-${candidate.id}-${index + 1}`,
     title: task.title,
-    detail: task.detail,
+    detail: mergeActionDetail(task.detail, task.evidence),
     category: task.category,
     priority: task.priority,
     semester: task.week,
