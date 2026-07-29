@@ -1,4 +1,4 @@
-import { ArrowRight, Bell, CalendarDays, CheckCircle2, Compass, Gauge, Sparkles } from "lucide-react";
+import { ArrowRight, Bell, CalendarDays, CheckCircle2, Compass, Gauge, Network, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getStudentDashboard, type StudentDashboard } from "../api/pilot";
@@ -71,6 +71,7 @@ export default function StudentHomePage() {
     </section>
 
     <section className="workbench-quick-links">
+      <Link to="/student/learning-path"><span><Network size={18} />专业学习路径</span><strong>导入培养方案，生成升学与算法路线</strong><ArrowRight size={16} /></Link>
       <Link to="/student/opportunities"><span><Sparkles size={18} />校内资源</span><strong>把能力缺口接到真实机会</strong><ArrowRight size={16} /></Link>
       <Link to="/student/roadmap"><span><CheckCircle2 size={18} />行动中心</span><strong>集中查看计划、进展与复盘</strong><ArrowRight size={16} /></Link>
       <Link to="/student/matching"><span><Compass size={18} />目标诊断</span><strong>重新比较路径和参照目标</strong><ArrowRight size={16} /></Link>

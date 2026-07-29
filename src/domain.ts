@@ -290,6 +290,86 @@ export type AiPlanningState = {
   generationTrace: GenerationTrace | null;
 };
 
+export type GraduateRoutePreference = "recommendation" | "postgraduate" | "dual";
+export type GraduateRoute = "recommendation_first" | "dual_track" | "postgraduate_first";
+export type CurriculumCourseStatus = "completed" | "current" | "planned";
+
+export type CurriculumCourse = {
+  id: string;
+  name: string;
+  semester: string;
+  credits: number | null;
+  category: string;
+  status: CurriculumCourseStatus;
+  score: number | null;
+};
+
+export type CurriculumPlan = {
+  title: string;
+  major: string;
+  entryYear: number | null;
+  sourceName: string;
+  importedAt: string;
+  courses: CurriculumCourse[];
+};
+
+export type LearningPathInputs = {
+  targetRole: string;
+  gpa: number;
+  gpaScale: 4 | 5 | 100;
+  rankPercentile: number | null;
+  routePreference: GraduateRoutePreference;
+  weeklyHours: number;
+  researchExperience: "none" | "starter" | "project" | "paper";
+  englishLevel: "starting" | "cet4" | "cet6";
+};
+
+export type LearningResource = {
+  id: string;
+  title: string;
+  provider: string;
+  type: "course" | "book" | "documentation" | "guide";
+  url: string;
+  note: string;
+};
+
+export type LearningPathNode = {
+  id: string;
+  phase: string;
+  semester: string;
+  title: string;
+  kind: "course" | "research" | "project" | "graduate" | "career";
+  status: "done" | "now" | "next" | "later";
+  why: string;
+  actions: string[];
+  evidence: string;
+  durationWeeks: number;
+  courseMatches: string[];
+  resourceIds: string[];
+};
+
+export type LearningPathPlan = {
+  targetRole: string;
+  objective: string;
+  route: GraduateRoute;
+  routeLabel: string;
+  routeReason: string;
+  routeConfidence: "high" | "medium" | "low";
+  assumptions: string[];
+  checkpoints: string[];
+  nodes: LearningPathNode[];
+  edges: Array<{ from: string; to: string }>;
+  resources: LearningResource[];
+  generatedAt: string;
+  version: string;
+};
+
+export type LearningPathState = {
+  inputs: LearningPathInputs;
+  curriculum: CurriculumPlan | null;
+  plan: LearningPathPlan | null;
+};
+
 export type CareerStateData = {
   hasOnboarded: boolean;
   profile: CareerProfile;
@@ -298,4 +378,5 @@ export type CareerStateData = {
   roadmapTasks: ActionTask[];
   research: ResearchState;
   aiPlanning: AiPlanningState;
+  learningPath: LearningPathState;
 };

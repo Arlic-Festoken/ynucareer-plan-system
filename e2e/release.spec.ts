@@ -35,6 +35,24 @@ test("roadmap supports custom actions and persists them", async ({ page }) => {
   await expect(customAction.locator(".action-item-title")).toHaveText("完成一次行业岗位分析");
 });
 
+test("curriculum import generates a detailed algorithm topology and saves near-term actions", async ({ page }) => {
+  await onboardHigherGrade(page);
+  await page.goto("/student/learning-path");
+  await page.getByRole("button", { name: "载入示例并立即生成" }).click();
+  await expect(page.getByText(/已载入 16 门计算机类示例课程/)).toBeVisible();
+  await page.getByLabel("专业排名前 %").fill("12");
+  await page.getByRole("button", { name: "生成针对性学习路径" }).click();
+  await expect(page.getByRole("heading", { name: "保研主线，考研保底" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "算法工程师学习路径拓扑图" })).toBeVisible();
+  await page.getByRole("button", { name: /吴恩达神经网络课程/ }).click();
+  await expect(page.getByRole("heading", { name: "吴恩达神经网络课程 → PyTorch" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Deep Learning Specialization/ }).first()).toHaveAttribute("href", /^https:\/\//);
+  await page.getByRole("button", { name: "加入行动中心" }).click();
+  await expect(page.getByText(/已把当前和下一阶段的/)).toBeVisible();
+  await page.getByRole("link", { name: "查看行动计划" }).click();
+  await expect(page.locator(".action-item").filter({ hasText: "把高数线代迁移到机器学习" })).toBeVisible();
+});
+
 test("route guards, 404 and AI fallback behave safely", async ({ page, request, baseURL }) => {
   await clearLocalCareerData(page);
   await page.goto("/student/matching");
@@ -122,7 +140,7 @@ test("DeepSeek planning flow creates candidates and saves a personalized plan", 
 test("core workspaces avoid horizontal overflow on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await onboardHigherGrade(page);
-  for (const path of ["/student/home", "/student/matching", "/student/opportunities", "/student/abilities", "/student/ai-planning", "/student/roadmap"]) {
+  for (const path of ["/student/home", "/student/matching", "/student/opportunities", "/student/abilities", "/student/ai-planning", "/student/roadmap", "/student/learning-path"]) {
     await page.goto(path);
     await expect(page.locator("main")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), path).toBeTruthy();
