@@ -2,6 +2,8 @@ import {
   ArrowRight,
   BookOpen,
   Check,
+  ChevronDown,
+  ChevronUp,
   ClipboardList,
   Download,
   ExternalLink,
@@ -52,6 +54,7 @@ export default function LearningPathPage() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [selectedId, setSelectedId] = useState("");
+  const [resourcesExpanded, setResourcesExpanded] = useState(false);
   const plan = learningPath.plan;
   const curriculum = learningPath.curriculum;
   const selectedNode = useMemo(
@@ -200,7 +203,10 @@ export default function LearningPathPage() {
 
       <section className="path-resource-section">
         <header><div><span className="section-kicker"><BookOpen size={15} /> 推荐资源</span><h2>课程、书和文档都挂到对应节点。</h2><p>优先使用官方课程与作者开放版本；校内课程能覆盖时，不重复堆网课。</p></div></header>
-        <div className="path-resource-grid">{plan.resources.map((resource) => <a href={resource.url} key={resource.id} rel="noreferrer" target="_blank"><span>{resource.type}</span><ExternalLink size={15} /><h3>{resource.title}</h3><strong>{resource.provider}</strong><p>{resource.note}</p></a>)}</div>
+        <div className={`path-resource-grid${resourcesExpanded ? " is-expanded" : ""}`}>{plan.resources.map((resource) => <a href={resource.url} key={resource.id} rel="noreferrer" target="_blank"><span>{resource.type}</span><ExternalLink size={15} /><h3>{resource.title}</h3><strong>{resource.provider}</strong><p>{resource.note}</p></a>)}</div>
+        {plan.resources.length > 3 && <button className="button button-quiet mobile-resource-toggle" onClick={() => setResourcesExpanded(!resourcesExpanded)} type="button">
+          {resourcesExpanded ? <><ChevronUp size={15} />收起资源</> : <><ChevronDown size={15} />查看全部 {plan.resources.length} 个资源</>}
+        </button>}
       </section>
 
       <section className="path-save-panel">

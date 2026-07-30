@@ -66,6 +66,7 @@ async function capture(name, path, options = {}) {
   await page.goto(`${baseURL}${path}`, { waitUntil: "networkidle" });
   if (options.zoom) await page.evaluate((zoom) => { document.body.style.zoom = String(zoom); }, options.zoom);
   if (options.openFirstBlueprint) await page.locator(".action-blueprint").first().evaluate((details) => { details.open = true; });
+  if (options.openMobileMenu) await page.getByRole("button", { name: "更多" }).click();
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     window.scrollTo(0, 0);
@@ -164,6 +165,7 @@ await capture("14a-ai-planning-mobile", "/student/ai-planning");
 await page.goto(`${baseURL}/student/learning-path`, { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "载入示例并立即生成" }).click();
 await capture("14b-learning-path-mobile", "/student/learning-path");
+await capture("14c-mobile-all-features", "/student/learning-path", { openMobileMenu: true });
 await capture("15-resource-board-mobile", "/student/opportunities");
 await capture("15a-ability-profile-mobile", "/student/abilities");
 

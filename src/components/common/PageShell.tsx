@@ -6,14 +6,16 @@ import {
   FlaskConical,
   Home,
   LibraryBig,
+  Menu,
   Network,
   Moon,
   Sparkles,
   Sun,
   UserRound,
+  X,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { resolveHome, useCareerStore } from "../../store/careerStore";
 import { useAuthStore } from "../../store/authStore";
 
@@ -43,6 +45,10 @@ function Brand({ compact = false }: { compact?: boolean }) {
 }
 
 export default function PageShell({ children, eyebrow, title, description, mode }: PageShellProps) {
+  const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileNavHidden, setMobileNavHidden] = useState(false);
+  const lastScrollY = useRef(0);
   const [storageAvailable] = useState(() => {
     try {
       localStorage.setItem("career-storage-check", "1");
@@ -70,6 +76,32 @@ export default function PageShell({ children, eyebrow, title, description, mode 
     localStorage.setItem("career-theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    function handleScroll() {
+      const current = Math.max(0, window.scrollY);
+      if (mobileMenuOpen || current < 24) {
+        setMobileNavHidden(false);
+      } else if (current > lastScrollY.current + 7) {
+        setMobileNavHidden(true);
+      } else if (current < lastScrollY.current - 7) {
+        setMobileNavHidden(false);
+      }
+      lastScrollY.current = current;
+    }
+    lastScrollY.current = window.scrollY;
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [mobileMenuOpen]);
+
   const studentNav: NavItem[] = [
     { to: studentHome, label: "工作台", icon: Compass, mobile: true },
     {
@@ -96,6 +128,15 @@ export default function PageShell({ children, eyebrow, title, description, mode 
     { to: "/account/profile", label: "账号与组织", icon: UserRound, mobile: true },
   ];
   const privateNav = isTeacher ? teacherNav : profile.role === "graduate" ? graduateNav : studentNav;
+  const mobilePrimaryNav = privateNav
+    .filter((item) => item.mobile && item.to !== "/account/profile")
+    .slice(0, 3);
+  const mobilePrimaryPaths = new Set(mobilePrimaryNav.map((item) => item.to));
+  const mobileMoreNav = privateNav.filter((item) => !mobilePrimaryPaths.has(item.to));
+  const mobileMoreActive = mobileMoreNav.some(
+    (item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`),
+  );
+  const mobileTabCount = mobilePrimaryNav.length + (mobileMoreNav.length ? 1 : 0);
   const publicNav: NavItem[] = [
     { to: "/", label: "首页", icon: Home },
     { to: "/login", label: "登录试点", icon: UserRound },
@@ -160,10 +201,32 @@ export default function PageShell({ children, eyebrow, title, description, mode 
       </main>
       <footer className="site-footer app-footer"><span>向前 · 校级试点</span><span>数据仅用于成长反馈</span></footer>
     </div>
-    <nav aria-label="移动端主导航" className="mobile-tabbar">
-      {privateNav.filter((item) => item.mobile).slice(0, 4).map(({ to, label, shortLabel, icon: Icon }) =>
+    <nav aria-label="移动端主导航" className={`mobile-tabbar mobile-tabbar-${mobileTabCount}${mobileNavHidden ? " is-hidden" : ""}`}>
+      {mobilePrimaryNav.map(({ to, label, shortLabel, icon: Icon }) =>
         <NavLink key={to} to={to}><Icon size={20} /><span>{shortLabel || label}</span></NavLink>)}
+      {mobileMoreNav.length > 0 && <button
+        aria-expanded={mobileMenuOpen}
+        aria-haspopup="dialog"
+        className={mobileMenuOpen || mobileMoreActive ? "active" : ""}
+        onClick={() => setMobileMenuOpen(true)}
+        type="button"
+      >
+        <Menu size={20} /><span>更多</span>
+      </button>}
     </nav>
+    {mobileMoreNav.length > 0 && mobileMenuOpen && <div className="mobile-nav-backdrop" onClick={() => setMobileMenuOpen(false)} role="presentation">
+      <section aria-label="全部功能" aria-modal="true" className="mobile-nav-sheet" onClick={(event) => event.stopPropagation()} role="dialog">
+        <header>
+          <div><span className="section-kicker">全部功能</span><h2>去你要处理的事情。</h2></div>
+          <button aria-label="关闭全部功能" onClick={() => setMobileMenuOpen(false)} type="button"><X size={20} /></button>
+        </header>
+        <nav aria-label="移动端全部功能">
+          {mobileMoreNav.map(({ to, label, icon: Icon }) => <NavLink key={to} onClick={() => setMobileMenuOpen(false)} to={to}>
+            <Icon size={20} /><span>{label}</span>
+          </NavLink>)}
+        </nav>
+      </section>
+    </div>}
   </div>;
 }
 

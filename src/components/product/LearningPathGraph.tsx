@@ -7,6 +7,7 @@ const columnGap = 78;
 const rowGap = 34;
 const topOffset = 74;
 const leftOffset = 28;
+const statusLabels = { done: "已完成", now: "当前重点", next: "下一阶段", later: "后续计划" };
 
 function splitTitle(title: string) {
   if (title.length <= 14) return [title];
@@ -40,8 +41,9 @@ export default function LearningPathGraph({
     };
   }, [nodes]);
 
-  return <div className="learning-path-graph" role="region" aria-label="算法工程师学习路径拓扑图" tabIndex={0}>
-    <svg height={layout.height} role="img" viewBox={`0 0 ${layout.width} ${layout.height}`} width={layout.width}>
+  return <>
+    <div className="learning-path-graph" role="region" aria-label="算法工程师学习路径拓扑图" tabIndex={0}>
+      <svg height={layout.height} role="img" viewBox={`0 0 ${layout.width} ${layout.height}`} width={layout.width}>
       <defs>
         <marker id="path-arrow" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
           <path d="M0,0 L8,4 L0,8 z" />
@@ -83,6 +85,24 @@ export default function LearningPathGraph({
           <circle cx={nodeWidth - 17} cy="18" r="4" />
         </g>;
       })}</g>
-    </svg>
-  </div>;
+      </svg>
+    </div>
+    <div aria-label="算法工程师学习路径步骤" className="learning-path-mobile-list">
+      {nodes.map((item, index) => <button
+        aria-pressed={selectedId === item.id}
+        className={`is-${item.status}${selectedId === item.id ? " is-selected" : ""}`}
+        key={item.id}
+        onClick={() => onSelect(item)}
+        type="button"
+      >
+        <span className="mobile-path-index">{String(index + 1).padStart(2, "0")}</span>
+        <span className="mobile-path-copy">
+          <small>{item.phase} · {item.kind.toUpperCase()}</small>
+          <strong>{item.title}</strong>
+          <em>{item.semester} · {item.durationWeeks} 周</em>
+        </span>
+        <span className="mobile-path-status">{statusLabels[item.status]}</span>
+      </button>)}
+    </div>
+  </>;
 }

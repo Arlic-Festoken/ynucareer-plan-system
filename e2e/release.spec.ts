@@ -147,6 +147,36 @@ test("core workspaces avoid horizontal overflow on mobile", async ({ page }) => 
   }
 });
 
+test("mobile navigation exposes secondary features and learning paths use a readable step list", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await onboardHigherGrade(page);
+
+  await page.getByRole("button", { name: "更多" }).click();
+  const allFeatures = page.getByRole("dialog", { name: "全部功能" });
+  await expect(allFeatures).toBeVisible();
+  await expect(allFeatures.getByRole("link", { name: "学习路径图" })).toBeVisible();
+  await expect(allFeatures.getByRole("link", { name: "能力与证据" })).toBeVisible();
+  await expect(allFeatures.getByRole("link", { name: "AI 规划" })).toBeVisible();
+  await expect(allFeatures.getByRole("link", { name: "个人资料" })).toBeVisible();
+
+  await allFeatures.getByRole("link", { name: "学习路径图" }).click();
+  await page.getByRole("button", { name: "载入示例并立即生成" }).click();
+  await expect(page.getByLabel("算法工程师学习路径步骤")).toBeVisible();
+  await expect(page.getByRole("region", { name: "算法工程师学习路径拓扑图" })).toBeHidden();
+  await expect(page.locator(".learning-path-mobile-list button")).toHaveCount(11);
+  await page.locator(".learning-path-mobile-list button").nth(1).click();
+  await expect(page.locator(".learning-path-mobile-list button").nth(1)).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".path-resource-grid a").nth(7)).toBeHidden();
+  await page.getByRole("button", { name: "查看全部 8 个资源" }).click();
+  await expect(page.locator(".path-resource-grid a").nth(7)).toBeVisible();
+
+  const mobileNavigation = page.getByRole("navigation", { name: "移动端主导航" });
+  await page.evaluate(() => window.scrollTo(0, 900));
+  await expect(mobileNavigation).toHaveClass(/is-hidden/);
+  await page.evaluate(() => window.scrollBy(0, -120));
+  await expect(mobileNavigation).not.toHaveClass(/is-hidden/);
+});
+
 test("job search exposes a clear empty state", async ({ page }) => {
   await onboardHigherGrade(page);
   await page.getByRole("link", { name: "目标诊断", exact: true }).click();
