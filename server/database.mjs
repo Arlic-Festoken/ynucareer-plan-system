@@ -258,6 +258,10 @@ export function createDatabase(path) {
       const row = statements.stateByUser.get(userId);
       return row ? safeJson(row.data_json) : null;
     },
+    getCareerStateRecord(userId) {
+      const row = statements.stateByUser.get(userId);
+      return row ? { state: safeJson(row.data_json), updatedAt: row.updated_at } : null;
+    },
     createOpportunity(opportunity) {
       statements.insertOpportunity.run(
         opportunity.id,

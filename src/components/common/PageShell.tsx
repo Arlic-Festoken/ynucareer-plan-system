@@ -1,11 +1,15 @@
 import {
   BarChart3,
   Bot,
+  Check,
   ClipboardCheck,
+  Cloud,
+  CloudOff,
   Compass,
   FlaskConical,
   Home,
   LibraryBig,
+  LoaderCircle,
   Menu,
   Network,
   Moon,
@@ -18,6 +22,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { resolveHome, useCareerStore } from "../../store/careerStore";
 import { useAuthStore } from "../../store/authStore";
+import { readStorageItem, writeStorageItem } from "../../store/accountMemory";
 
 type PageShellProps = {
   children: ReactNode;
@@ -59,7 +64,7 @@ export default function PageShell({ children, eyebrow, title, description, mode 
     }
   });
   const [theme, setTheme] = useState<"light" | "dark">(() => {
-    const saved = localStorage.getItem("career-theme");
+    const saved = readStorageItem("career-theme");
     if (saved === "light" || saved === "dark") return saved;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
@@ -67,13 +72,16 @@ export default function PageShell({ children, eyebrow, title, description, mode 
   const profile = useCareerStore((state) => state.profile);
   const accountUser = useAuthStore((state) => state.user);
   const authStatus = useAuthStore((state) => state.status);
+  const syncStatus = useAuthStore((state) => state.syncStatus);
+  const lastSyncedAt = useAuthStore((state) => state.lastSyncedAt);
+  const syncCareerNow = useAuthStore((state) => state.syncCareerNow);
   const studentHome = resolveHome(profile.role, profile.grade);
   const isTeacher = mode === "teacher" || accountUser?.role === "teacher" || Boolean(accountUser?.permissions?.length);
   const isPrivate = authStatus === "authenticated" && (isTeacher || hasOnboarded);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem("career-theme", theme);
+    writeStorageItem("career-theme", theme);
   }, [theme]);
 
   useEffect(() => {
@@ -142,6 +150,19 @@ export default function PageShell({ children, eyebrow, title, description, mode 
     { to: "/login", label: "登录试点", icon: UserRound },
   ];
   const displayName = accountUser?.displayName || (isTeacher ? "教师工作台" : roleLabel[profile.role]);
+  const syncLabel = syncStatus === "loading"
+    ? "正在恢复计划"
+    : syncStatus === "saving"
+      ? "正在自动保存"
+      : syncStatus === "error"
+        ? "已保存在本机"
+        : "已自动保存";
+  const SyncIcon = syncStatus === "error" ? CloudOff : syncStatus === "loading" || syncStatus === "saving" ? LoaderCircle : syncStatus === "saved" ? Check : Cloud;
+  const syncDetail = syncStatus === "error"
+    ? "点击重试云端同步"
+    : lastSyncedAt
+      ? `云端 ${new Date(lastSyncedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`
+      : "账号记忆已开启";
 
   const themeButton = <button
     aria-label={`切换为${theme === "dark" ? "浅色" : "深色"}主题`}
@@ -192,7 +213,20 @@ export default function PageShell({ children, eyebrow, title, description, mode 
           <span>{isTeacher ? "校级试点工作区" : "个人成长闭环"}</span>
           <strong>{displayName}</strong>
         </div>
-        {themeButton}
+        <div className="app-topbar-actions">
+          <button
+            aria-label={`${syncLabel}。${syncDetail}`}
+            aria-live="polite"
+            className={`account-sync-chip is-${syncStatus}`}
+            disabled={syncStatus !== "error"}
+            onClick={() => { void syncCareerNow(); }}
+            type="button"
+          >
+            <SyncIcon aria-hidden="true" size={15} />
+            <span><strong>{syncLabel}</strong><small>{syncDetail}</small></span>
+          </button>
+          {themeButton}
+        </div>
       </header>
       {!storageAvailable && <div className="storage-warning" role="alert">暂时无法自动保存，请检查浏览器设置。</div>}
       <main id="main-content" className="site-main app-main">

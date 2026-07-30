@@ -1,7 +1,8 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { blankAbilities } from "../data/catalog";
 import type { AbilityScores, ActionTask, CareerProfile, CareerStateData, CurriculumPlan, LearningPathInputs, LearningPathPlan, ResearchOutcome, UserRole } from "../domain";
+import { readStorageItem, removeStorageItem, writeStorageItem } from "./accountMemory";
 
 const defaultProfile: CareerProfile = {
   id: "local-demo-profile",
@@ -205,6 +206,11 @@ export const useCareerStore = create<CareerStore>()(
       name: "career-navigation-v1",
       version: 4,
       migrate: (persistedState) => migrateCareerState(persistedState),
+      storage: createJSONStorage(() => ({
+        getItem: readStorageItem,
+        setItem: (name, value) => { writeStorageItem(name, value); },
+        removeItem: removeStorageItem,
+      })),
     },
   ),
 );

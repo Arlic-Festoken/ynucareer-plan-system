@@ -36,8 +36,13 @@ describe("SQLite account database", () => {
     database.saveCareerState("user-1", { hasOnboarded: true, selectedJobId: "data-analyst" }, "2026-07-24T01:00:00.000Z");
     expect(database.getProfile("user-1")).toMatchObject({ university: "云南大学", major: "软件工程", grade: 3 });
     expect(database.getCareerState("user-1")).toMatchObject({ hasOnboarded: true, selectedJobId: "data-analyst" });
+    expect(database.getCareerStateRecord("user-1")).toEqual({
+      state: { hasOnboarded: true, selectedJobId: "data-analyst" },
+      updatedAt: "2026-07-24T01:00:00.000Z",
+    });
     expect(database.getProfile("user-2")).toBeNull();
     expect(database.getCareerState("user-2")).toBeNull();
+    expect(database.getCareerStateRecord("user-2")).toBeNull();
     database.close();
   });
 
