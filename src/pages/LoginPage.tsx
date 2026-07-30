@@ -51,9 +51,9 @@ export default function LoginPage() {
       <div className="auth-story"><span className="section-kicker">个人生涯工作台</span><h1>{registerMode ? "建立自己的行动节奏。" : "欢迎回来，继续向前。"}</h1><p>{registerMode ? "从一个方向开始，用行动逐步验证。" : "接着完成上次留下的计划。"}</p><div className="auth-progress-preview" aria-label="规划流程"><div><span>01</span><strong>选方向</strong></div><div><span>02</span><strong>做行动</strong></div><div><span>03</span><strong>看进展</strong></div></div></div>
       <form className="auth-form" onSubmit={submit}>
         <div><span className="section-kicker">{registerMode ? "创建账号" : "账号登录"}</span><h2>{registerMode ? "从这里开始" : "继续你的计划"}</h2></div>
-        {registerMode && <label>昵称<input autoComplete="name" maxLength={40} onChange={(event) => setDisplayName(event.target.value)} placeholder="例如：云同学" required value={displayName} /></label>}
-        <label>邮箱<input autoComplete="email" inputMode="email" onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" required type="email" value={email} /></label>
-        <label>密码<input autoComplete={registerMode ? "new-password" : "current-password"} minLength={10} onChange={(event) => setPassword(event.target.value)} placeholder={registerMode ? "至少 10 个字符" : "输入密码"} required type="password" value={password} /></label>
+        {registerMode && <label>昵称<input autoComplete="name" maxLength={40} name="displayName" onChange={(event) => setDisplayName(event.target.value)} placeholder="例如：云同学" required value={displayName} /></label>}
+        <label>邮箱<input autoComplete="email" inputMode="email" name="email" onChange={(event) => setEmail(event.target.value)} placeholder="name@example.com" required type="email" value={email} /></label>
+        <label>密码<input autoComplete={registerMode ? "new-password" : "current-password"} maxLength={128} minLength={10} name={registerMode ? "new-password" : "current-password"} onChange={(event) => setPassword(event.target.value)} placeholder={registerMode ? "至少 10 个字符" : "输入密码"} required type="password" value={password} /></label>
         {authError && <p className="form-error" role="alert">{authError}</p>}
         <button className="button button-primary auth-submit" disabled={submitting || status === "checking"} type="submit">{submitting ? "正在处理…" : registerMode ? "创建账号" : "登录"} <ArrowRight size={17} /></button>
         <p className="auth-switch">{registerMode ? "已有账号？" : "第一次使用？"} <Link to={registerMode ? "/login" : "/register"}>{registerMode ? "直接登录" : "创建账号"}</Link></p>

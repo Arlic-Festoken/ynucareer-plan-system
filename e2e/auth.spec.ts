@@ -14,6 +14,21 @@ test("account screens keep technical policy copy out of the primary experience",
   await expect(page.getByRole("heading", { name: "完善学习背景" })).toBeVisible();
 });
 
+test("switching between login and registration never carries the password", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("密码").fill("login-password-only");
+  await page.getByRole("link", { name: "创建账号" }).click();
+  await expect(page).toHaveURL(/\/register$/);
+  await expect(page.getByLabel("密码")).toHaveValue("");
+  await expect(page.getByLabel("密码")).toHaveAttribute("autocomplete", "new-password");
+
+  await page.getByLabel("密码").fill("registration-only");
+  await page.getByRole("link", { name: "直接登录" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByLabel("密码")).toHaveValue("");
+  await expect(page.getByLabel("密码")).toHaveAttribute("autocomplete", "current-password");
+});
+
 test("account API persists profile and career state behind an HttpOnly session", async ({ request, baseURL }) => {
   const apiBase = `${baseURL}/api`;
   const email = `student-${Date.now()}@ynu.edu.cn`;

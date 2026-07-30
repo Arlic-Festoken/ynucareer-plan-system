@@ -54,15 +54,32 @@ if [[ ! -f "${release_path}/public/index.html" ||
   exit 2
 fi
 
+if ! grep -q 'src="/career/assets/' "${release_path}/public/index.html" ||
+   ! grep -q 'href="/career/assets/' "${release_path}/public/index.html" ||
+   ! grep -q 'href="/career/favicon.svg"' "${release_path}/public/index.html"; then
+  echo "Release frontend was not built for the /career/ public base." >&2
+  exit 2
+fi
+
 (
   cd "${release_path}"
-  npm ci --omit=dev --no-audit --no-fund
+  if [[ ! -d "node_modules/better-sqlite3" ]]; then
+    npm ci --omit=dev --no-audit --no-fund
+  fi
+  npm ls --omit=dev --depth=0
+  node --input-type=module <<'NODE'
+import Database from "better-sqlite3";
+
+const database = new Database(":memory:");
+database.prepare("SELECT 1").get();
+database.close();
+NODE
 )
 
 if [[ -n "${previous_release}" && -f "${shared_path}/career.db" ]]; then
   backup_path="${shared_path}/backups/career-${release_id}.db"
   (
-    cd "${previous_release}"
+    cd "${release_path}"
     DATABASE_PATH="${shared_path}/career.db" BACKUP_PATH="${backup_path}" node --input-type=module <<'NODE'
 import Database from "better-sqlite3";
 

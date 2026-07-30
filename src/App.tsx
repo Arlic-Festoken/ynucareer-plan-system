@@ -25,8 +25,8 @@ function PageFallback() { return <div className="route-loader" role="status">正
 export default function App() {
   return <Suspense fallback={<PageFallback />}><Routes>
     <Route path="/" element={<LandingPage />} />
-    <Route path="/login" element={<LoginPage />} />
-    <Route path="/register" element={<LoginPage />} />
+    <Route path="/login" element={<LoginPage key="login" />} />
+    <Route path="/register" element={<LoginPage key="register" />} />
     <Route path="/onboarding" element={<AuthRoute><OnboardingPage /></AuthRoute>} />
     <Route path="/student/home" element={<AuthRoute><RoleRoute allowed={["freshman", "junior"]}><StudentHomePage /></RoleRoute></AuthRoute>} />
     <Route path="/student/awakening" element={<AuthRoute><RoleRoute allowed={["freshman"]}><AwakeningPage /></RoleRoute></AuthRoute>} />
