@@ -56,7 +56,19 @@ fi
 
 (
   cd "${release_path}"
-  npm ci --omit=dev --no-audit --no-fund
+  if [[ -d node_modules ]]; then
+    npm ls --omit=dev --no-audit --no-fund
+    node --input-type=module <<'NODE'
+import Database from "better-sqlite3";
+
+const database = new Database(":memory:");
+database.prepare("SELECT 1 AS ready").get();
+database.close();
+NODE
+    echo "Bundled production dependencies validated."
+  else
+    npm ci --omit=dev --no-audit --no-fund
+  fi
 )
 
 if [[ -n "${previous_release}" && -f "${shared_path}/career.db" ]]; then
