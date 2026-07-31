@@ -60,7 +60,7 @@ test("student registers, completes onboarding, edits profile and returns after l
 
   await page.getByRole("radio", { name: "高年级学生" }).check();
   await page.getByRole("button", { name: "继续" }).click();
-  await page.getByRole("button", { name: "生成我的行动计划" }).click();
+  await page.getByRole("button", { name: "保存并继续" }).click();
   await expect(page).toHaveURL(/\/student\/home$/);
 
   await page.getByRole("link", { name: "个人资料" }).click();
@@ -107,7 +107,7 @@ test("failed cloud sync keeps the account's local plan for the next login", asyn
   await page.getByRole("button", { name: "创建账号" }).click();
   await page.getByRole("radio", { name: "高年级学生" }).check();
   await page.getByRole("button", { name: "继续" }).click();
-  await page.getByRole("button", { name: "生成我的行动计划" }).click();
+  await page.getByRole("button", { name: "保存并继续" }).click();
   await expect(page).toHaveURL(/\/student\/home$/);
 
   await page.route("**/api/me/career-state", async (route) => {
@@ -165,7 +165,7 @@ test("a generated learning path restores in a fresh browser context", async ({ b
   await firstPage.getByRole("button", { name: "创建账号" }).click();
   await firstPage.getByRole("radio", { name: "高年级学生" }).check();
   await firstPage.getByRole("button", { name: "继续" }).click();
-  await firstPage.getByRole("button", { name: "生成我的行动计划" }).click();
+  await firstPage.getByRole("button", { name: "保存并继续" }).click();
   await firstPage.goto("/student/learning-path");
   await firstPage.getByRole("button", { name: "载入示例并立即生成" }).click();
   await firstPage.getByRole("button", { name: "生成针对性学习路径" }).click();
@@ -200,6 +200,6 @@ test("blocked browser storage falls back to account sync without breaking the wo
   await expect(page.getByRole("heading", { name: /用两分钟/ })).toBeVisible();
   await page.getByRole("radio", { name: "高年级学生" }).check();
   await page.getByRole("button", { name: "继续" }).click();
-  await page.getByRole("button", { name: "生成我的行动计划" }).click();
+  await page.getByRole("button", { name: "保存并继续" }).click();
   await expect(page).toHaveURL(/\/student\/home$/);
 });

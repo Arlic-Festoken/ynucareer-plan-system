@@ -76,7 +76,7 @@ test("route guards, 404 and AI fallback behave safely", async ({ page, request, 
   expect([200, 503]).toContain(directions.status());
 });
 
-test("low-year AI planning fuses exploration tasks into one authoritative plan", async ({ page }) => {
+test("low-year AI planning keeps calibration separate from the only authoritative plan", async ({ page }) => {
   await page.route("**/api/healthz", async (route) => route.fulfill({ json: { status: "ok", provider: "deepseek", model: "deepseek-v4-flash", ai: "ready" } }));
   await page.route("**/api/planning/directions", async (route) => route.fulfill({
     json: {
@@ -127,14 +127,9 @@ test("low-year AI planning fuses exploration tasks into one authoritative plan",
   }));
 
   await onboardRole(page, "低年级学生");
-  await page.goto("/student/awakening");
   await page.getByRole("button", { name: /方向设计/ }).click();
   await page.getByRole("button", { name: /AI 应用开发/ }).click();
-  await page.getByRole("button", { name: /行动创造/ }).click();
-  await page.getByRole("button", { name: "生成探索行动计划" }).click();
-  await page.getByRole("button", { name: "完成：完成一个 API 调用小作品" }).click();
-  await page.goto("/student/roadmap");
-  await expect(page.locator(".action-item").filter({ hasText: "完成一个 API 调用小作品" })).toBeVisible();
+  await page.getByRole("button", { name: "保存方向并进入 AI 规划" }).click();
 
   await page.goto("/student/ai-planning");
   await page.getByText("教育科技", { exact: true }).click();
@@ -142,18 +137,26 @@ test("low-year AI planning fuses exploration tasks into one authoritative plan",
   await page.getByRole("button", { name: /校园 AI 应用开发/ }).click();
   await page.getByRole("button", { name: "生成个性化行动计划" }).click();
   await page.getByRole("button", { name: "保存并融合行动计划" }).click();
+  await expect(page.locator(".direction-context-card")).toContainText("AI 应用开发");
   await expect(page.getByText("已融合为一份行动计划")).toBeVisible();
   await expect(page.getByText("AI 主线 2 项")).toBeVisible();
-  await expect(page.getByText("替换重复 1 项")).toBeVisible();
+  await expect(page.getByText("替换重复 0 项")).toBeVisible();
   await page.getByRole("link", { name: /已保存，查看行动计划/ }).click();
 
   await expect(page.getByText("AI 主线", { exact: true })).toBeVisible();
-  await expect(page.getByText("探索补充", { exact: true })).toBeVisible();
-  await expect(page.getByText("历史成果", { exact: true })).toBeVisible();
   await expect(page.locator(".action-item").filter({ hasText: "完成一个 AI API 调用小作品" })).toBeVisible();
-  await expect(page.locator(".action-item").filter({ hasText: "建立 AI 应用案例夹" })).toBeVisible();
   await page.reload();
   await expect(page.getByText("AI 主线", { exact: true })).toBeVisible();
+  await expect(page.locator(".action-item").filter({ hasText: "完成一个 AI API 调用小作品" })).toHaveCount(1);
+
+  await page.goto("/student/ai-planning");
+  await page.getByRole("link", { name: "重新校准方向" }).click();
+  await page.getByRole("button", { name: "方向设计" }).click();
+  await page.getByRole("button", { name: /数据分析与决策支持/ }).click();
+  await page.getByRole("button", { name: "保存调整并返回 AI 规划" }).click();
+  await expect(page.getByText("现有计划基于旧方向画像")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "四周内完成一次校园 AI 应用方向验证。" })).toBeVisible();
+  await page.goto("/student/roadmap");
   await expect(page.locator(".action-item").filter({ hasText: "完成一个 AI API 调用小作品" })).toHaveCount(1);
 });
 

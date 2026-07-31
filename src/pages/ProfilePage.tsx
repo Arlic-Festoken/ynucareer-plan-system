@@ -2,7 +2,7 @@ import { ArrowRight, Check, Cloud, Compass, LogOut, Mail, Save, UserRound } from
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PageShell from "../components/common/PageShell";
-import { majors } from "../data/catalog";
+import { directions, majors } from "../data/catalog";
 import { useAuthStore } from "../store/authStore";
 import { resolveHome, useCareerStore } from "../store/careerStore";
 
@@ -18,6 +18,7 @@ export default function ProfilePage() {
   const syncCareerNow = useAuthStore((state) => state.syncCareerNow);
   const logout = useAuthStore((state) => state.logout);
   const careerProfile = useCareerStore((state) => state.profile);
+  const awakening = useCareerStore((state) => state.awakening);
   const updateCareerProfile = useCareerStore((state) => state.updateProfile);
   const initial = useMemo(() => ({
     university: storedProfile?.university || "云南大学",
@@ -51,8 +52,9 @@ export default function ProfilePage() {
     navigate("/login", { replace: true });
   }
 
-  const stage = careerProfile.role === "graduate" ? "科研与就业双线" : careerProfile.grade <= 2 ? "方向探索" : pathLabels[careerProfile.targetPath];
+  const stage = careerProfile.role === "graduate" ? "科研与就业双线" : careerProfile.grade <= 2 ? "AI 规划起步" : pathLabels[careerProfile.targetPath];
   const gradeLabel = careerProfile.grade <= 4 ? `大 ${careerProfile.grade}` : `研 ${careerProfile.grade - 4}`;
+  const calibratedDirection = directions.find((item) => item.id === awakening.selectedDirectionId);
 
   return <PageShell eyebrow="个人中心" title="完善资料，让建议更贴近你。">
     <section className="profile-summary">
@@ -76,7 +78,8 @@ export default function ProfilePage() {
 
       <aside className="account-panel">
         <div><Compass size={22} /><span className="section-kicker">当前规划</span><h2>{stage}</h2></div>
-        <dl className="account-plan-meta"><div><dt>专业</dt><dd>{careerProfile.major}</dd></div><div><dt>年级</dt><dd>{gradeLabel}</dd></div></dl>
+        <dl className="account-plan-meta"><div><dt>专业</dt><dd>{careerProfile.major}</dd></div><div><dt>年级</dt><dd>{gradeLabel}</dd></div>{careerProfile.grade <= 2 && <div><dt>方向画像</dt><dd>{calibratedDirection?.title || "待校准"}</dd></div>}</dl>
+        {careerProfile.grade <= 2 && <Link className="button button-secondary" to="/student/awakening">{calibratedDirection ? "重新校准方向" : "完成方向校准"} <ArrowRight size={15} /></Link>}
         <Link className="button button-secondary account-home-link" to={resolveHome(careerProfile.role, careerProfile.grade)}>回到工作台 <ArrowRight size={15} /></Link>
         <button className="button button-quiet danger-button" onClick={signOut} type="button"><LogOut size={16} />退出登录</button>
       </aside>

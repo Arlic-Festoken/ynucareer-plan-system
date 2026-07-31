@@ -11,6 +11,7 @@ const ABILITY_KEYS = [
 ];
 const TASK_CATEGORIES = new Set(["course", "project", "practice", "reflection", "research", "career"]);
 const INTERVIEW_ACTION_PATTERN = /访谈|约谈|约访|联系.{0,10}(?:从业者|校友|学长|企业|HR)/;
+const MOTIVATION_KEYS = ["curiosity", "contribution", "achievement", "collaboration"];
 
 function text(value, limit = MAX_TEXT) {
   return typeof value === "string" ? value.trim().slice(0, limit) : "";
@@ -44,12 +45,23 @@ function profile(input) {
 }
 
 export function sanitizeDirectionInput(input) {
+  const calibration = input && typeof input === "object" && input.directionCalibration && typeof input.directionCalibration === "object"
+    ? input.directionCalibration
+    : {};
+  const motivation = calibration.motivation && typeof calibration.motivation === "object" ? calibration.motivation : {};
   return {
     profile: profile(input),
     preferredScenes: list(input?.preferredScenes, 6, 100),
     strengthEvidence: text(input?.strengthEvidence, 600),
     constraints: text(input?.constraints, 500),
     timeBudgetHours: number(input?.timeBudgetHours, 1, 30, 6),
+    directionCalibration: {
+      selectedDirectionTitle: text(calibration.selectedDirectionTitle, 100),
+      visionText: text(calibration.visionText, 500),
+      visionTags: list(calibration.visionTags, 6, 80),
+      motivation: Object.fromEntries(MOTIVATION_KEYS.map((key) => [key, number(motivation[key], 1, 5, 3)])),
+      revision: number(calibration.revision, 0, 1000, 0),
+    },
   };
 }
 
@@ -97,6 +109,7 @@ export function buildDirectionRequest(input, model) {
     [
       "你是一位熟悉中国高校培养路径与新兴产业岗位的生涯规划顾问。",
       "请把宽泛兴趣细分为 3 个彼此有实质差异、可通过行动验证的方向候选。",
+      "学生的方向校准只是一项可修改的当前假设：用它理解偏好和问题场景，不要把宽方向当成已经确定的职业结论。",
       "候选应具体到问题场景或能力组合，不要只重复岗位名称；要解释画像证据、现实取舍与验证方式。",
       "验证方式不得要求学生进行企业、校友或从业者访谈、约谈或联系；优先使用公开资料、课程、作品、模拟演练和自我复盘。",
       "不能承诺录取、就业或收入，不推断未提供的信息，不索取身份、成绩、联系方式、家庭或健康信息。",

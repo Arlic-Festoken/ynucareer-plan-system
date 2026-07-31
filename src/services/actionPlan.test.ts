@@ -88,14 +88,14 @@ describe("action plan presentation", () => {
     expect(result.length).toBeLessThanOrEqual(500);
   });
 
-  it("presents a low-year fused plan as AI main line, exploration support and history", () => {
+  it("presents a low-year fused plan as AI main line, retained support and history", () => {
     const groups = groupActionsForPlan([
       action({ id: "rule-active", lane: "exploration", source: "rule", status: "planned" }),
       action({ id: "rule-done", lane: "exploration", source: "rule", status: "completed" }),
       action({ id: "ai-main", lane: "exploration", source: "ai", status: "planned" }),
     ], true);
 
-    expect(groups.map(([label]) => label)).toEqual(["AI 主线", "探索补充", "历史成果"]);
+    expect(groups.map(([label]) => label)).toEqual(["AI 主线", "保留补充", "历史成果"]);
     expect(groups[0][1].map((item) => item.id)).toEqual(["ai-main"]);
     expect(groups[2][1].map((item) => item.id)).toEqual(["rule-done"]);
   });

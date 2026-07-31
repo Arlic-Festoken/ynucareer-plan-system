@@ -72,7 +72,7 @@ test("student and staff complete the reviewed resource and evidence feedback loo
   await studentPage.goto(`${baseURL}/onboarding`);
   await studentPage.getByRole("radio", { name: "高年级学生" }).check();
   await studentPage.getByRole("button", { name: "继续" }).click();
-  await studentPage.getByRole("button", { name: "生成我的行动计划" }).click();
+  await studentPage.getByRole("button", { name: "保存并继续" }).click();
   await studentPage.goto(`${baseURL}/student/opportunities`);
 
   const studentCard = studentPage.locator(".opportunity-card").filter({ hasText: title });

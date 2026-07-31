@@ -1,16 +1,17 @@
 import { ArrowRight, Bot, Check, CircleAlert, Clock3, LoaderCircle, Route, Sparkles, Target } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { getCoachStatus, type CoachStatus } from "../api/careerCoach";
 import { requestDirectionCandidates, requestPersonalizedPlan } from "../api/careerPlanner";
 import { reconcileGeneratedActions } from "../api/pilot";
 import PageShell from "../components/common/PageShell";
 import TaskList from "../components/common/TaskList";
+import { directions } from "../data/catalog";
 import type { ActionTask, AiActionPlan, AiDirectionCandidate, GenerationTrace } from "../domain";
 import { mergeActionDetail } from "../services/actionPlan";
 import { mergeAiPrimaryPlan, type PlanFusionSummary } from "../services/planFusion";
 import { recommendDirections } from "../services/recommendation";
-import { useCareerStore } from "../store/careerStore";
+import { aiPlanNeedsRefresh, useCareerStore } from "../store/careerStore";
 
 const sceneOptions = ["教育科技", "人工智能应用", "数据与商业", "智慧医疗", "智能制造", "数字公共服务"];
 
@@ -29,6 +30,7 @@ function toTasks(candidate: AiDirectionCandidate, tasks: AiActionPlan["tasks"], 
 }
 
 export default function AiPlanningPage() {
+  const location = useLocation();
   const profile = useCareerStore((state) => state.profile);
   const aiPlanning = useCareerStore((state) => state.aiPlanning);
   const roadmapTasks = useCareerStore((state) => state.roadmapTasks);
@@ -45,6 +47,10 @@ export default function AiPlanningPage() {
   const [saved, setSaved] = useState(false);
   const [fusionSummary, setFusionSummary] = useState<PlanFusionSummary | null>(null);
   const selected = aiPlanning.directionResult?.candidates.find((item) => item.id === aiPlanning.selectedCandidateId) ?? null;
+  const calibratedDirection = directions.find((item) => item.id === awakening.selectedDirectionId) ?? null;
+  const calibrationComplete = Boolean(awakening.calibratedAt || awakening.selectedDirectionId);
+  const planNeedsRefresh = aiPlanNeedsRefresh(aiPlanning, awakening.revision);
+  const calibrationJustUpdated = Boolean((location.state as { calibrationUpdated?: boolean } | null)?.calibrationUpdated);
   const ruleDirections = useMemo(() => recommendDirections(profile).slice(0, 3), [profile]);
 
   useEffect(() => {
@@ -59,6 +65,13 @@ export default function AiPlanningPage() {
     strengthEvidence: aiPlanning.strengthEvidence,
     constraints: aiPlanning.constraints,
     timeBudgetHours: aiPlanning.timeBudgetHours,
+    directionCalibration: {
+      selectedDirectionTitle: calibratedDirection?.title || "",
+      visionText: awakening.visionText,
+      visionTags: awakening.visionTags,
+      motivation: awakening.motivation,
+      revision: awakening.revision,
+    },
   };
 
   function toggleScene(scene: string) {
@@ -89,7 +102,7 @@ export default function AiPlanningPage() {
     setSaved(false);
     try {
       const response = await requestPersonalizedPlan({ ...context, selectedDirection: selected, horizonWeeks: aiPlanning.horizonWeeks });
-      setAiPlanning({ actionPlan: response.result, generatedAt: response.generatedAt, generationTrace: response.trace });
+      setAiPlanning({ actionPlan: response.result, generatedAt: response.generatedAt, generationTrace: response.trace, generatedFromCalibrationRevision: awakening.revision });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "AI 行动计划暂时不可用，请稍后重试。");
     } finally {
@@ -107,7 +120,6 @@ export default function AiPlanningPage() {
     setError("");
     if (profile.grade <= 2) {
       setAwakening({
-        selectedDirectionId: selected.id,
         actionTasks: fusion.tasks,
       });
     } else {
@@ -140,14 +152,26 @@ export default function AiPlanningPage() {
 
   const previewTasks = aiPlanning.actionPlan ? toTasks(selected as AiDirectionCandidate, aiPlanning.actionPlan.tasks, aiPlanning.generationTrace) : [];
 
-  return <PageShell eyebrow="DeepSeek · 个性化规划" title="把宽泛兴趣，缩小成可以验证的方向。" description="AI 结合画像与现实约束提出候选；最终选择仍由你的真实行动决定。">
+  return <PageShell eyebrow="DeepSeek · 唯一规划主线" title="从方向画像，到可执行行动。" description="先确认规划依据，再细分方向、生成计划，最后统一进入行动中心。">
+    <section aria-label="规划流程" className="planning-flow">
+      <div className="is-complete"><span>01</span><strong>方向画像</strong><small>{calibrationComplete ? "已建立" : "待校准"}</small></div>
+      <div><span>02</span><strong>AI 细分</strong><small>比较方向</small></div>
+      <div><span>03</span><strong>行动计划</strong><small>拆解任务</small></div>
+      <div><span>04</span><strong>行动中心</strong><small>执行与复盘</small></div>
+    </section>
+    {calibrationJustUpdated && <div className="calibration-update-note" role="status"><Check size={18} /><div><strong>方向画像已更新</strong><span>{aiPlanning.actionPlan ? "旧计划仍完整保留；请按新画像重新生成后再决定是否替换。" : "DeepSeek 将使用新的画像生成候选与计划。"}</span></div></div>}
+    <section className="direction-context-card">
+      <div><span className="section-kicker">当前方向画像</span><h2>{calibratedDirection?.title || "尚未完成方向校准"}</h2><p>{awakening.visionText || "补充一个想解决的真实问题，AI 的建议会更具体。"}</p><div className="direction-context-tags">{awakening.visionTags.map((tag) => <span key={tag}>{tag}</span>)}</div></div>
+      <Link className="button button-secondary" to="/student/awakening">{calibrationComplete ? "重新校准方向" : "完成方向校准"} <ArrowRight size={16} /></Link>
+    </section>
+    {planNeedsRefresh && <div className="plan-refresh-warning" role="status"><CircleAlert size={18} /><div><strong>现有计划基于旧方向画像</strong><span>它不会被删除。重新生成方向和计划后，你再决定是否融合到行动中心。</span></div></div>}
     <section className="ai-planner-intro">
-      <div><Bot size={26} /><div><span className="section-kicker">两阶段规划</span><h2>先细分方向，再生成行动。</h2><p>方向候选会说明适配依据、取舍和验证信号；行动计划会按你的可用时间拆解。</p></div></div>
+      <div><Bot size={26} /><div><span className="section-kicker">规划引擎</span><h2>DeepSeek 只生成这一份主计划。</h2><p>方向校准提供稳定上下文；这里负责细分、取舍和行动拆解，不再与“探索方向”重复。</p></div></div>
       <div className={`ai-service-chip is-${status}`}>{checking ? <><LoaderCircle className="is-spinning" size={15} />检查服务</> : status === "ready" ? <><Check size={15} />DeepSeek 已连接</> : <><CircleAlert size={15} />AI 未连接</>}</div>
     </section>
 
     <section className="ai-context-panel">
-      <div className="ai-context-heading"><div><span className="section-kicker">01 · 补充上下文</span><h2>补充经历和现实限制。</h2></div></div>
+      <div className="ai-context-heading"><div><span className="section-kicker">02 · 补充上下文</span><h2>补充经历和现实限制。</h2></div></div>
       <fieldset><legend>想优先接近的场景（最多 3 个）</legend><div className="option-chips">{sceneOptions.map((scene) => <label key={scene}><input checked={aiPlanning.preferredScenes.includes(scene)} onChange={() => toggleScene(scene)} type="checkbox" /><span>{scene}</span></label>)}</div></fieldset>
       <div className="ai-context-fields">
         <label>已有经历或优势证据<textarea maxLength={600} onChange={(event) => setAiPlanning({ strengthEvidence: event.target.value, directionResult: null, selectedCandidateId: null, actionPlan: null })} placeholder="例如：做过校园数据可视化项目，负责需求梳理和数据清洗。" rows={4} value={aiPlanning.strengthEvidence} /></label>
@@ -159,7 +183,7 @@ export default function AiPlanningPage() {
     </section>
 
     {aiPlanning.directionResult && <section className="ai-direction-section">
-      <div className="ai-section-heading"><div><span className="section-kicker">02 · 方向候选</span><h2>比较问题场景，不只比较岗位名称。</h2><p>{aiPlanning.directionResult.overview}</p></div><Target size={28} /></div>
+      <div className="ai-section-heading"><div><span className="section-kicker">03 · 方向候选</span><h2>比较问题场景，不只比较岗位名称。</h2><p>{aiPlanning.directionResult.overview}</p></div><Target size={28} /></div>
       <div className="ai-direction-grid">{aiPlanning.directionResult.candidates.map((candidate) => <button aria-pressed={selected?.id === candidate.id} className={selected?.id === candidate.id ? "ai-direction-card is-selected" : "ai-direction-card"} key={candidate.id} onClick={() => { setAiPlanning({ selectedCandidateId: candidate.id, actionPlan: null }); setSaved(false); }} type="button">
         <span className="ai-fit-label">{candidate.fit}</span><strong>{candidate.title}</strong><small>{candidate.specialization}</small><p>{candidate.rationale}</p>
         <dl><div><dt>可能处理</dt><dd>{candidate.problemExamples.join(" · ")}</dd></div><div><dt>需要验证</dt><dd>{candidate.evidenceNeeded.join(" · ")}</dd></div></dl>
@@ -170,7 +194,7 @@ export default function AiPlanningPage() {
     </section>}
 
     {selected && <section className="ai-plan-builder">
-      <div><span className="section-kicker">03 · 个性化行动</span><h2>围绕「{selected.title}」生成可执行计划。</h2><p>先做方向验证，再补能力与作品证据。</p></div>
+      <div><span className="section-kicker">04 · 个性化行动</span><h2>围绕「{selected.title}」生成可执行计划。</h2><p>先做方向验证，再补能力与作品证据。</p></div>
       <label>计划周期<select aria-label="计划周期" onChange={(event) => setAiPlanning({ horizonWeeks: Number(event.target.value), actionPlan: null })} value={aiPlanning.horizonWeeks}><option value="4">4 周快速验证</option><option value="8">8 周完整推进</option><option value="12">12 周深度积累</option></select></label>
       <button className="button button-primary" disabled={planLoading} onClick={generatePlan} type="button">{planLoading ? <><LoaderCircle className="is-spinning" size={17} />正在生成计划</> : <><Route size={17} />生成个性化行动计划</>}</button>
     </section>}

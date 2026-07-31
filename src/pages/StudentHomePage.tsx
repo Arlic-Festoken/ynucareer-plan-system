@@ -22,10 +22,10 @@ export default function StudentHomePage() {
   const completed = localTasks.filter((task) => task.completed).length;
   const fallbackAction: DashboardAction = {
     id: "fallback",
-    title: explorer ? "完成一次方向探索" : "选择一个参照目标",
-    detail: explorer ? "从一个真实问题开始，形成第一项可验证行动。" : "对照岗位或升学路径，把差距拆成本学期行动。",
-    reason: explorer ? "当前阶段重点" : `${paths[profile.targetPath]}准备`,
-    href: explorer ? "/student/awakening" : "/student/matching",
+    title: explorer ? "生成一份 AI 主线计划" : "选择一个参照目标",
+    detail: explorer ? "基于已保存的方向画像，细分方向并形成可验证行动。" : "对照岗位或升学路径，把差距拆成本学期行动。",
+    reason: explorer ? "当前规划主线" : `${paths[profile.targetPath]}准备`,
+    href: explorer ? "/student/ai-planning" : "/student/matching",
     dueDate: "",
     priority: 0,
     status: "planned",
@@ -50,7 +50,7 @@ export default function StudentHomePage() {
 
   return <PageShell>
     <section className="today-heading">
-      <div><span className="section-kicker">{profile.major} · {explorer ? "探索阶段" : `${paths[profile.targetPath]}准备中`}</span><h1>今天，先推进<br />最重要的一步。</h1><p>{dateLabel} · 工作台按截止时间、教师反馈和能力缺口排序。</p></div>
+      <div><span className="section-kicker">{profile.major} · {explorer ? "规划起步" : `${paths[profile.targetPath]}准备中`}</span><h1>今天，先推进<br />最重要的一步。</h1><p>{dateLabel} · 工作台按截止时间、教师反馈和能力缺口排序。</p></div>
       <div className="today-status"><CalendarDays size={19} /><span>本周完成</span><strong>{completed}</strong><small>{localTasks.length ? `共 ${localTasks.length} 项本地历史计划` : "等待第一项行动"}</small></div>
     </section>
 
@@ -74,7 +74,7 @@ export default function StudentHomePage() {
       <Link to="/student/learning-path"><span><Network size={18} />专业学习路径</span><strong>导入培养方案，生成升学与算法路线</strong><ArrowRight size={16} /></Link>
       <Link to="/student/opportunities"><span><Sparkles size={18} />校内资源</span><strong>把能力缺口接到真实机会</strong><ArrowRight size={16} /></Link>
       <Link to="/student/roadmap"><span><CheckCircle2 size={18} />行动中心</span><strong>集中查看计划、进展与复盘</strong><ArrowRight size={16} /></Link>
-      <Link to="/student/matching"><span><Compass size={18} />目标诊断</span><strong>重新比较路径和参照目标</strong><ArrowRight size={16} /></Link>
+      <Link to={explorer ? "/student/ai-planning" : "/student/matching"}><span><Compass size={18} />{explorer ? "AI 规划" : "目标诊断"}</span><strong>{explorer ? "从方向画像生成唯一主线计划" : "重新比较路径和参照目标"}</strong><ArrowRight size={16} /></Link>
     </section>
 
     {dashboardError && <p className="sync-note" role="status">{dashboardError} 本地历史计划仍可继续使用。</p>}

@@ -7,6 +7,13 @@ export type PlanningContext = {
   strengthEvidence: string;
   constraints: string;
   timeBudgetHours: number;
+  directionCalibration: {
+    selectedDirectionTitle: string;
+    visionText: string;
+    visionTags: string[];
+    motivation: Record<string, number>;
+    revision: number;
+  };
 };
 
 export type ActionPlanInput = PlanningContext & {

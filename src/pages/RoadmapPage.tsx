@@ -137,7 +137,7 @@ export default function RoadmapPage() {
     }
   }
 
-  const entry = explorer ? "/student/awakening" : "/student/matching";
+  const entry = explorer ? "/student/ai-planning" : "/student/matching";
   return <PageShell eyebrow="行动中心" title="让计划进入真实的时间。" description="安排下一步、推进状态并留下成果；完成不等于自动获得能力分。">
     <section aria-labelledby="plan-overview-title" className="plan-overview">
       <div className="plan-overview-heading">
@@ -175,7 +175,7 @@ export default function RoadmapPage() {
     </section>}
 
     {loading ? <div className="opportunity-loading" role="status"><LoaderCircle size={20} />正在同步行动…</div> : !actions.length
-      ? <EmptyState action={explorer ? "去完成方向探索" : "去生成行动计划"} detail="生成后的任务会自动进入这里，并按账号跨设备保存。" title="这里还没有行动" to={entry} />
+      ? <EmptyState action={explorer ? "去生成 AI 计划" : "去生成行动计划"} detail="生成后的任务会自动进入这里，并按账号跨设备保存。" title="这里还没有行动" to={entry} />
       : <section className="authoritative-actions">{groups.map(([lane, items]) => <section key={lane}>
         <div className="roadmap-group-heading"><span>{lane}</span><p>{items.filter((item) => item.status === "completed").length} / {items.length} 已完成</p></div>
         <div className="action-item-list">{items.map((action, index) =>

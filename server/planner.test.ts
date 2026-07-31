@@ -25,15 +25,34 @@ describe("DeepSeek planning boundary", () => {
       strengthEvidence: "完成过一个课程项目".repeat(100),
       constraints: "每周只能投入六小时",
       timeBudgetHours: 99,
+      directionCalibration: {
+        selectedDirectionTitle: "AI 应用开发",
+        visionText: "希望解决真实学习问题".repeat(100),
+        visionTags: ["技术创造", "真实产品"],
+        motivation: { curiosity: 9, contribution: 4, ignored: 5 },
+        revision: 3,
+        calibratedAt: "should-not-leave-the-browser",
+      },
     });
     expect(clean.strengthEvidence.length).toBe(600);
     expect(clean.timeBudgetHours).toBe(30);
     expect(clean.profile.abilityScores.professionalSkills).toBe(72);
-    expect(buildDirectionRequest(clean, "deepseek-v4-flash")).toMatchObject({
+    expect(clean.directionCalibration).toEqual({
+      selectedDirectionTitle: "AI 应用开发",
+      visionText: "希望解决真实学习问题".repeat(100).slice(0, 500),
+      visionTags: ["技术创造", "真实产品"],
+      motivation: { curiosity: 5, contribution: 4, achievement: 3, collaboration: 3 },
+      revision: 3,
+    });
+    const request = buildDirectionRequest(clean, "deepseek-v4-flash");
+    expect(request).toMatchObject({
       model: "deepseek-v4-flash",
       response_format: { type: "json_object" },
       thinking: { type: "disabled" },
     });
+    expect(request.messages[1].content).toContain("AI 应用开发");
+    expect(request.messages[1].content).not.toContain("should-not-leave-the-browser");
+    expect(request.messages[0].content).toContain("方向校准只是一项可修改的当前假设");
   });
 
   it("accepts exactly three complete direction candidates", () => {

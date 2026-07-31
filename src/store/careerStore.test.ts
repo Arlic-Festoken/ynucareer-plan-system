@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { blankAbilities } from "../data/catalog";
-import { careerStateSnapshot, migrateAbilityScores, migrateCareerState, useCareerStore } from "./careerStore";
+import {
+  aiPlanNeedsRefresh,
+  careerStateSnapshot,
+  migrateAbilityScores,
+  migrateCareerState,
+  resolveOnboardingDestination,
+  useCareerStore,
+} from "./careerStore";
 
 describe("career store", () => {
   it("persists onboarding data in the active state and can reset it", () => {
@@ -28,9 +35,74 @@ describe("career store", () => {
     expect(migrated.profile.abilityScores.professionalSkills).toBeGreaterThan(blankAbilities.professionalSkills);
     expect(migrated.profile.abilityScores.resilience).toBe(blankAbilities.resilience);
     expect(migrated.awakening.motivation.curiosity).toBe(3);
+    expect(migrated.awakening).toMatchObject({ calibratedAt: null, revision: 0 });
     expect(migrated.research.careerTasks).toEqual([]);
-    expect(migrated.aiPlanning).toMatchObject({ timeBudgetHours: 6, horizonWeeks: 8, directionResult: null });
+    expect(migrated.aiPlanning).toMatchObject({ timeBudgetHours: 6, horizonWeeks: 8, directionResult: null, generatedFromCalibrationRevision: null });
     expect(migrated.learningPath).toMatchObject({ curriculum: null, plan: null, inputs: { targetRole: "算法工程师", weeklyHours: 10 } });
+  });
+
+  it("routes a new low-grade student through one calibration before the workspace", () => {
+    expect(resolveOnboardingDestination({ role: "freshman", grade: 2 }, false)).toBe("/student/awakening");
+    expect(resolveOnboardingDestination({ role: "freshman", grade: 2 }, true)).toBe("/student/home");
+    expect(resolveOnboardingDestination({ role: "junior", grade: 3 }, false)).toBe("/student/home");
+    expect(resolveOnboardingDestination({ role: "graduate", grade: 5 }, false)).toBe("/graduate/navigation");
+  });
+
+  it("recalibrates direction without deleting an existing AI plan or action history", () => {
+    useCareerStore.getState().resetDemo();
+    useCareerStore.getState().setAwakening({
+      actionTasks: [{
+        id: "completed-history",
+        title: "已完成的历史行动",
+        detail: "保留证据和反思",
+        category: "project",
+        priority: "high",
+        semester: "第 1 周",
+        completed: true,
+        reflection: "这条方向值得继续。",
+        evidence: ["作品链接"],
+      }],
+    });
+    useCareerStore.getState().setAiPlanning({
+      actionPlan: {
+        directionTitle: "教育 AI 产品实验",
+        objective: "验证方向",
+        strategy: "先做后评估",
+        tasks: [],
+        checkpoints: [],
+        risks: [],
+      },
+      generatedFromCalibrationRevision: 1,
+    });
+
+    useCareerStore.getState().completeDirectionCalibration({
+      selectedDirectionId: "ai-application",
+      visionText: "用 AI 改善真实学习问题",
+      visionTags: ["技术创造", "真实产品"],
+      motivation: { curiosity: 5, contribution: 4, achievement: 3, collaboration: 3 },
+    });
+    useCareerStore.getState().completeDirectionCalibration({
+      selectedDirectionId: "data-intelligence",
+      visionText: "用数据帮助公共服务决策",
+      visionTags: ["社会服务"],
+      motivation: { curiosity: 4, contribution: 5, achievement: 3, collaboration: 4 },
+    });
+
+    const state = useCareerStore.getState();
+    expect(state.awakening).toMatchObject({
+      selectedDirectionId: "data-intelligence",
+      visionText: "用数据帮助公共服务决策",
+      revision: 2,
+    });
+    expect(state.awakening.calibratedAt).toEqual(expect.any(String));
+    expect(state.awakening.actionTasks[0]).toMatchObject({
+      id: "completed-history",
+      completed: true,
+      reflection: "这条方向值得继续。",
+      evidence: ["作品链接"],
+    });
+    expect(state.aiPlanning.actionPlan?.directionTitle).toBe("教育 AI 产品实验");
+    expect(aiPlanNeedsRefresh(state.aiPlanning, state.awakening.revision)).toBe(true);
   });
 
   it("persists AI planning choices and clears them with demo reset", () => {

@@ -116,7 +116,7 @@ async function resetAndOnboard(roleName) {
   await page.goto(`${baseURL}/onboarding`, { waitUntil: "networkidle" });
   await page.getByRole("radio", { name: roleName }).check();
   await page.getByRole("button", { name: "继续" }).click();
-  await page.getByRole("button", { name: "生成我的行动计划" }).click();
+  await page.getByRole("button", { name: "保存并继续" }).click();
 }
 
 await capture("01-landing-desktop", "/");
@@ -135,14 +135,14 @@ await registerAuditAccount();
 await capture("02b-onboarding-desktop", "/onboarding");
 
 await resetAndOnboard("低年级学生");
-await capture("03-explorer-home-desktop", "/student/home");
 await capture("04-awakening-desktop", "/student/awakening");
 await page.getByRole("button", { name: "方向设计" }).click();
 await page.locator(".direction-option").first().click();
-await page.getByRole("button", { name: "行动创造" }).click();
-await page.getByRole("button", { name: "生成探索行动计划" }).click();
-await page.locator(".task-toggle").first().click();
-await capture("05-explorer-roadmap-desktop", "/student/roadmap", { openFirstBlueprint: true });
+await page.getByRole("button", { name: "确认画像" }).click();
+await captureCurrent("04a-direction-calibration-review-desktop");
+await page.getByRole("button", { name: "保存方向并进入 AI 规划" }).click();
+await capture("03-explorer-home-desktop", "/student/home");
+await capture("05-empty-roadmap-desktop", "/student/roadmap");
 await page.route("**/api/healthz", async (route) => route.fulfill({ json: { status: "ok", provider: "deepseek", model: "deepseek-v4-flash", ai: "ready" } }));
 await page.route("**/api/planning/directions", async (route) => route.fulfill({ json: {
   result: {

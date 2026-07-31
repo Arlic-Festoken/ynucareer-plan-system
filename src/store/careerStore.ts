@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { blankAbilities } from "../data/catalog";
-import type { AbilityScores, ActionTask, CareerProfile, CareerStateData, CurriculumPlan, LearningPathInputs, LearningPathPlan, ResearchOutcome, UserRole } from "../domain";
+import type { AbilityScores, ActionTask, AiPlanningState, CareerProfile, CareerStateData, CurriculumPlan, LearningPathInputs, LearningPathPlan, ResearchOutcome, UserRole } from "../domain";
 import { readStorageItem, removeStorageItem, writeStorageItem } from "./accountMemory";
 
 const defaultProfile: CareerProfile = {
@@ -18,7 +18,7 @@ const defaultProfile: CareerProfile = {
 const defaultData: CareerStateData = {
   hasOnboarded: false,
   profile: defaultProfile,
-  awakening: { activeStep: 1, motivation: { curiosity: 3, contribution: 3, achievement: 3, collaboration: 3 }, visionText: "", visionTags: [], selectedDirectionId: null, actionTasks: [], reflection: "" },
+  awakening: { activeStep: 1, motivation: { curiosity: 3, contribution: 3, achievement: 3, collaboration: 3 }, visionText: "", visionTags: [], selectedDirectionId: null, calibratedAt: null, revision: 0, actionTasks: [], reflection: "" },
   selectedJobId: "data-analyst",
   roadmapTasks: [],
   research: { focus: "", industry: "", outcomes: [], researchTasks: [], careerTasks: [] },
@@ -33,6 +33,7 @@ const defaultData: CareerStateData = {
     actionPlan: null,
     generatedAt: null,
     generationTrace: null,
+    generatedFromCalibrationRevision: null,
   },
   learningPath: {
     inputs: {
@@ -54,6 +55,7 @@ type CareerStore = CareerStateData & {
   completeOnboarding: (profile: CareerProfile) => void;
   updateProfile: (patch: Partial<CareerProfile>) => void;
   setAwakening: (patch: Partial<CareerStateData["awakening"]>) => void;
+  completeDirectionCalibration: (calibration: Pick<CareerStateData["awakening"], "selectedDirectionId" | "visionText" | "visionTags" | "motivation">) => void;
   setSelectedJobId: (id: string) => void;
   setRoadmapTasks: (tasks: ActionTask[]) => void;
   updateRoadmapTask: (id: string, patch: Partial<ActionTask>) => void;
@@ -114,6 +116,10 @@ export function migrateCareerState(persistedState: unknown): CareerStateData {
   const persistedResearch: Partial<CareerStateData["research"]> = persisted.research ?? {};
   const persistedAiPlanning: Partial<CareerStateData["aiPlanning"]> = persisted.aiPlanning ?? {};
   const persistedLearningPath: Partial<CareerStateData["learningPath"]> = persisted.learningPath ?? {};
+  const legacyCalibrationComplete = Boolean(persistedAwakening.selectedDirectionId);
+  const calibrationRevision = Number.isFinite(persistedAwakening.revision)
+    ? Math.max(0, Number(persistedAwakening.revision))
+    : legacyCalibrationComplete ? 1 : 0;
   return {
     ...defaultData,
     ...persisted,
@@ -130,6 +136,10 @@ export function migrateCareerState(persistedState: unknown): CareerStateData {
       motivation: { ...defaultData.awakening.motivation, ...persistedAwakening.motivation },
       visionTags: Array.isArray(persistedAwakening.visionTags) ? persistedAwakening.visionTags : [],
       actionTasks: Array.isArray(persistedAwakening.actionTasks) ? persistedAwakening.actionTasks : [],
+      calibratedAt: typeof persistedAwakening.calibratedAt === "string"
+        ? persistedAwakening.calibratedAt
+        : legacyCalibrationComplete ? "legacy" : null,
+      revision: calibrationRevision,
     },
     roadmapTasks: Array.isArray(persisted.roadmapTasks) ? persisted.roadmapTasks : [],
     research: {
@@ -148,6 +158,9 @@ export function migrateCareerState(persistedState: unknown): CareerStateData {
         : null,
       actionPlan: persistedAiPlanning.actionPlan && Array.isArray(persistedAiPlanning.actionPlan.tasks)
         ? persistedAiPlanning.actionPlan
+        : null,
+      generatedFromCalibrationRevision: Number.isFinite(persistedAiPlanning.generatedFromCalibrationRevision)
+        ? Number(persistedAiPlanning.generatedFromCalibrationRevision)
         : null,
     },
     learningPath: {
@@ -187,6 +200,15 @@ export const useCareerStore = create<CareerStore>()(
       completeOnboarding: (profile) => set({ hasOnboarded: true, profile }),
       updateProfile: (patch) => set((state) => ({ profile: { ...state.profile, ...patch, abilityScores: { ...state.profile.abilityScores, ...patch.abilityScores } } })),
       setAwakening: (patch) => set((state) => ({ awakening: { ...state.awakening, ...patch } })),
+      completeDirectionCalibration: (calibration) => set((state) => ({
+        awakening: {
+          ...state.awakening,
+          ...calibration,
+          activeStep: 5,
+          calibratedAt: new Date().toISOString(),
+          revision: state.awakening.revision + 1,
+        },
+      })),
       setSelectedJobId: (selectedJobId) => set({ selectedJobId }),
       setRoadmapTasks: (roadmapTasks) => set({ roadmapTasks }),
       updateRoadmapTask: (id, patch) => set((state) => ({ roadmapTasks: updateTask(state.roadmapTasks, id, patch) })),
@@ -220,4 +242,13 @@ export function resolveHome(role: UserRole, _grade: number) {
   if (role === "teacher") return "/teacher/dashboard";
   if (role === "graduate") return "/graduate/navigation";
   return "/student/home";
+}
+
+export function resolveOnboardingDestination(profile: Pick<CareerProfile, "role" | "grade">, calibrationComplete: boolean) {
+  if (profile.role === "freshman" && profile.grade <= 2 && !calibrationComplete) return "/student/awakening";
+  return resolveHome(profile.role, profile.grade);
+}
+
+export function aiPlanNeedsRefresh(aiPlanning: Pick<AiPlanningState, "actionPlan" | "generatedFromCalibrationRevision">, calibrationRevision: number) {
+  return Boolean(aiPlanning.actionPlan && aiPlanning.generatedFromCalibrationRevision !== calibrationRevision);
 }

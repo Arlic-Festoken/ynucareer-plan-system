@@ -40,7 +40,7 @@ type NavItem = {
   mobile?: boolean;
 };
 
-const roleLabel = { freshman: "探索阶段", junior: "决策阶段", graduate: "研究生", teacher: "教师端" };
+const roleLabel = { freshman: "规划起步", junior: "决策阶段", graduate: "研究生", teacher: "教师端" };
 
 function Brand({ compact = false }: { compact?: boolean }) {
   return <Link className={`site-brand${compact ? " compact" : ""}`} to="/" aria-label="向前生涯导航首页">
@@ -112,16 +112,14 @@ export default function PageShell({ children, eyebrow, title, description, mode 
 
   const studentNav: NavItem[] = [
     { to: studentHome, label: "工作台", icon: Compass, mobile: true },
-    {
-      to: profile.grade <= 2 ? "/student/awakening" : "/student/matching",
-      label: profile.grade <= 2 ? "探索方向" : "目标诊断",
-      icon: Sparkles,
-    },
+    profile.grade <= 2
+      ? { to: "/student/ai-planning", label: "AI 规划", icon: Bot }
+      : { to: "/student/matching", label: "目标诊断", icon: Sparkles },
     { to: "/student/opportunities", label: "校内资源", shortLabel: "资源", icon: LibraryBig, mobile: true },
     { to: "/student/roadmap", label: "行动计划", shortLabel: "行动", icon: ClipboardCheck, mobile: true },
     { to: "/student/learning-path", label: "学习路径图", icon: Network },
     { to: "/student/abilities", label: "能力与证据", icon: BarChart3 },
-    { to: "/student/ai-planning", label: "AI 规划", icon: Bot },
+    ...(profile.grade > 2 ? [{ to: "/student/ai-planning", label: "AI 规划", icon: Bot }] : []),
     { to: "/account/profile", label: "个人资料", shortLabel: "我的", icon: UserRound, mobile: true },
   ];
   const graduateNav: NavItem[] = [

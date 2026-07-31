@@ -235,6 +235,8 @@ export type AwakeningState = {
   visionText: string;
   visionTags: string[];
   selectedDirectionId: string | null;
+  calibratedAt: string | null;
+  revision: number;
   actionTasks: ActionTask[];
   reflection: string;
 };
@@ -288,6 +290,7 @@ export type AiPlanningState = {
   actionPlan: AiActionPlan | null;
   generatedAt: string | null;
   generationTrace: GenerationTrace | null;
+  generatedFromCalibrationRevision: number | null;
 };
 
 export type GraduateRoutePreference = "recommendation" | "postgraduate" | "dual";

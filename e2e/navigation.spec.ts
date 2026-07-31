@@ -7,40 +7,42 @@ test("landing previews a verified campus action instead of a research interview"
   await expect(page.locator("main")).not.toContainText(/岗位访谈|准备 3 个访谈问题|联系 1 位相关从业者/);
 });
 
-test("low-grade student completes an exploration action", async ({ page }) => {
+test("low-grade student calibrates once, then uses AI planning as the only planning entry", async ({ page }) => {
   await onboardRole(page, "低年级学生");
-  await expect(page.getByRole("heading", { name: /今天，先推进/ })).toBeVisible();
-  await expect(page.getByText("AI 未配置，规则计划可用。")).toBeVisible();
-  await page.getByRole("link", { name: "探索方向" }).click();
-  await expect(page.getByRole("heading", { name: "先回答一个真实的问题，再决定是否走远。" })).toBeVisible();
+  await expect(page).toHaveURL(/\/student\/awakening$/);
+  await expect(page.getByRole("heading", { name: "用一次校准，建立规划起点。" })).toBeVisible();
   await page.getByRole("button", { name: "方向设计" }).click();
   await page.getByRole("button", { name: /AI 应用开发/ }).click();
-  await page.getByRole("button", { name: "行动创造" }).click();
-  await page.getByRole("button", { name: "生成探索行动计划" }).click();
-  await expect(page.getByText("完成一个 API 调用小作品")).toBeVisible();
-  await page.getByRole("link", { name: "工作台" }).click();
-  await page.getByRole("link", { name: "探索方向" }).click();
-  await expect(page).toHaveURL(/\/student\/awakening$/);
-  await expect(page.getByText("完成一个 API 调用小作品")).toBeVisible();
-  await page.getByRole("link", { name: "行动计划" }).click();
-  await expect(page.getByRole("heading", { name: "让计划进入真实的时间。" })).toBeVisible();
-  const generatedAction = page.locator(".action-item").filter({ hasText: "完成一个 API 调用小作品" });
-  await expect(generatedAction.locator(".action-item-title")).toHaveText("完成一个 API 调用小作品");
-  await expect(page.getByText("计划概览")).toBeVisible();
-  await expect(page.getByText("本周焦点")).toBeVisible();
-  await generatedAction.getByText("查看执行蓝图").click();
-  await expect(generatedAction.getByText("建议执行")).toBeVisible();
-  await expect(generatedAction.locator(".action-blueprint-steps li")).toHaveCount(3);
+  await page.getByRole("button", { name: "保存方向并进入 AI 规划" }).click();
+  await expect(page).toHaveURL(/\/student\/ai-planning$/);
+  await expect(page.locator(".direction-context-card")).toContainText("AI 应用开发");
+  await expect(page.getByRole("navigation", { name: "工作区导航" }).getByRole("link", { name: "探索方向" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "工作区导航" }).getByRole("link", { name: "AI 规划" })).toHaveCount(1);
 
-  await page.getByLabel("行动名称").fill("完成一次实验室开放日观察记录");
-  await page.getByLabel("具体说明").fill("观察开放日中的三个真实问题，整理成一页场景记录。");
-  await page.getByLabel("行动类型").selectOption("practice");
-  await page.getByLabel("截止日期").fill("2026-08-15");
-  await page.getByRole("button", { name: "加入行动" }).click();
+  await page.getByRole("link", { name: "重新校准方向" }).click();
+  await expect(page).toHaveURL(/\/student\/awakening$/);
+  await expect(page.getByRole("heading", { name: "重新校准方向画像。" })).toBeVisible();
+  await page.getByRole("button", { name: "方向设计" }).click();
+  await page.getByRole("button", { name: /数据分析与决策支持/ }).click();
+  await page.getByRole("button", { name: "保存调整并返回 AI 规划" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "方向画像已更新" })).toBeVisible();
+
+  await page.getByRole("link", { name: "个人资料" }).click();
+  await expect(page.getByRole("link", { name: "重新校准方向" })).toBeVisible();
   await page.reload();
-  const manualAction = page.locator(".action-item").filter({ hasText: "完成一次实验室开放日观察记录" });
-  await expect(manualAction).toContainText("观察开放日中的三个真实问题");
-  await expect(manualAction).toContainText("8月15日截止");
+  await expect(page.getByRole("link", { name: "重新校准方向" })).toBeVisible();
+});
+
+test("mobile direction calibration keeps its save action above the tab bar", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await onboardRole(page, "低年级学生");
+  await page.getByRole("button", { name: "方向设计" }).click();
+  await page.getByRole("button", { name: /AI 应用开发/ }).click();
+  await page.getByRole("button", { name: "确认画像" }).click();
+  const save = page.getByRole("button", { name: "保存方向并进入 AI 规划" });
+  await expect(save).toBeInViewport();
+  await save.click();
+  await expect(page).toHaveURL(/\/student\/ai-planning$/);
 });
 
 test("higher-grade student advances a server-authoritative action and keeps it after reload", async ({ page }) => {
