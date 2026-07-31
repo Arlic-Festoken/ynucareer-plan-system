@@ -202,7 +202,27 @@ export default function AiPlanningPage() {
     {aiPlanning.actionPlan && selected && <section className="ai-plan-result">
       <div className="ai-section-heading"><div><span className="section-kicker">DeepSeek 规划结果</span><h2>{aiPlanning.actionPlan.objective}</h2><p>{aiPlanning.actionPlan.strategy}</p></div><span className="ai-plan-count">{aiPlanning.actionPlan.tasks.length}<small>项行动</small></span></div>
       <TaskList readOnly tasks={previewTasks} />
-      <div className="ai-checkpoints"><div><span className="section-kicker">复盘节点</span>{aiPlanning.actionPlan.checkpoints.map((item) => <p key={`${item.week}-${item.question}`}><strong>{item.week}</strong>{item.question}</p>)}</div>{aiPlanning.actionPlan.risks.length > 0 && <div><span className="section-kicker">注意偏差</span>{aiPlanning.actionPlan.risks.map((risk) => <p key={risk}>{risk}</p>)}</div>}</div>
+      <div className="ai-checkpoints">
+        <div>
+          <span className="section-kicker">复盘节点</span>
+          <div className="ai-checkpoint-list">
+            {aiPlanning.actionPlan.checkpoints.map((item) => (
+              <p className="ai-checkpoint-row" key={`${item.week}-${item.question}`}>
+                <strong>{item.week}</strong>
+                <span>{item.question}</span>
+              </p>
+            ))}
+          </div>
+        </div>
+        {aiPlanning.actionPlan.risks.length > 0 && (
+          <div>
+            <span className="section-kicker">注意偏差</span>
+            <ul className="ai-risk-list">
+              {aiPlanning.actionPlan.risks.map((risk) => <li key={risk}>{risk}</li>)}
+            </ul>
+          </div>
+        )}
+      </div>
       {fusionSummary && <div className="ai-fusion-summary" role="status"><div><Check size={18} /><strong>已融合为一份行动计划</strong></div><span>AI 主线 {fusionSummary.aiCount} 项</span><span>保留探索 {fusionSummary.retainedExplorationCount} 项</span><span>替换重复 {fusionSummary.replacedCount} 项</span><span>历史记录 {fusionSummary.preservedHistoryCount} 项</span></div>}
       <div className="ai-save-plan"><button className="button button-primary" disabled={saving} onClick={() => void savePlan()} type="button"><Check size={17} />{saving ? "正在融合并同步…" : "保存并融合行动计划"}</button>{saved && <Link className="button button-secondary" to="/student/roadmap">已保存，查看行动计划 <ArrowRight size={16} /></Link>}</div>
     </section>}

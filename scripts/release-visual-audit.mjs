@@ -202,10 +202,12 @@ await capture("06-awakening-mobile", "/student/awakening");
 await capture("07-explorer-roadmap-mobile", "/student/roadmap", { openFirstBlueprint: true });
 await page.evaluate(() => localStorage.setItem("career-theme", "dark"));
 await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+await capture("07a-awakening-mobile-dark", "/student/awakening");
 await capture("07a-explorer-roadmap-dark-reduced-motion", "/student/roadmap", { openFirstBlueprint: true });
+await page.setViewportSize({ width: 1440, height: 1000 });
+await capture("07a-awakening-desktop-dark", "/student/awakening");
 await page.evaluate(() => localStorage.setItem("career-theme", "light"));
 await page.emulateMedia({ colorScheme: "light", reducedMotion: "no-preference" });
-await page.setViewportSize({ width: 1440, height: 1000 });
 await capture("07b-explorer-roadmap-200-percent-zoom", "/student/roadmap", { zoom: 2, openFirstBlueprint: true });
 await page.evaluate(() => { document.body.style.zoom = "1"; });
 
@@ -240,11 +242,22 @@ await capture("14c-mobile-all-features", "/student/learning-path", { openMobileM
 await capture("15-resource-board-mobile", "/student/opportunities");
 await capture("15a-ability-profile-mobile", "/student/abilities");
 
+await page.evaluate(() => localStorage.setItem("career-theme", "dark"));
+await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+await capture("15b-student-home-mobile-dark", "/student/home");
+await capture("15c-ai-planning-mobile-dark", "/student/ai-planning");
+await page.setViewportSize({ width: 1440, height: 1000 });
+await capture("15d-student-home-desktop-dark", "/student/home");
+await capture("15e-matching-desktop-dark", "/student/matching");
+await capture("15f-ai-planning-desktop-dark", "/student/ai-planning");
+await capture("15g-ability-profile-desktop-dark", "/student/abilities");
+await capture("15h-roadmap-desktop-dark", "/student/roadmap");
+await capture("15i-resource-board-desktop-dark", "/student/opportunities");
+await capture("15j-learning-path-desktop-dark", "/student/learning-path");
+
 await registerAuditAccount("visual-teacher@ynu.edu.cn");
 await page.setViewportSize({ width: 1440, height: 1000 });
 await capture("16-staff-workspace-desktop", "/teacher/dashboard");
-await page.evaluate(() => localStorage.setItem("career-theme", "dark"));
-await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
 await capture("17-staff-workspace-dark-reduced-motion", "/teacher/dashboard");
 await page.setViewportSize({ width: 390, height: 844 });
 await capture("18-staff-workspace-mobile-dark", "/teacher/dashboard");

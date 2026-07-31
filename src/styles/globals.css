@@ -249,10 +249,15 @@ svg { flex: 0 0 auto; }
 .ai-plan-count { display: grid; place-items: center; min-width: 78px; color: var(--signal-dark); font: 760 42px/1 ui-monospace, monospace; }
 .ai-plan-count small { margin-top: 6px; color: var(--muted); font: 700 10px/1 sans-serif; }
 .ai-plan-result .task-list { margin-top: 25px; }
-.ai-checkpoints { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
-.ai-checkpoints > div { padding: 17px; border-radius: 11px; background: #f2f4f0; }
-.ai-checkpoints p { display: grid; grid-template-columns: 80px 1fr; gap: 10px; margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
-.ai-checkpoints strong { color: var(--ink); }
+.ai-checkpoints { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+.ai-checkpoints > div { min-width: 0; padding: 18px; border-radius: 11px; background: #f2f4f0; }
+.ai-checkpoint-list, .ai-risk-list { display: grid; gap: 11px; margin-top: 14px; }
+.ai-checkpoint-row { display: grid; grid-template-columns: minmax(68px, auto) minmax(0, 1fr); gap: 12px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.ai-checkpoint-row strong { color: var(--ink); }
+.ai-checkpoint-row span, .ai-risk-list li { min-width: 0; overflow-wrap: anywhere; }
+.ai-risk-list { margin-bottom: 0; padding: 0; list-style: none; }
+.ai-risk-list li { position: relative; padding-left: 16px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.ai-risk-list li::before { content: ""; position: absolute; top: .68em; left: 0; width: 6px; height: 2px; border-radius: 99px; background: #b55f42; }
 .ai-fusion-summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 20px; padding: 14px 16px; border: 1px solid #cbd9c2; border-radius: 14px; background: #f0f6ec; }
 .ai-fusion-summary > div { display: flex; gap: 8px; align-items: center; margin-right: auto; color: #315600; font-size: 12px; }
 .ai-fusion-summary > div svg { color: var(--signal-dark); }
@@ -858,25 +863,209 @@ button { color: inherit; }
 .evidence-dialog > label { padding-block: 10px; }
 .evidence-dialog > div:last-child { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 24px 0; }
 
+/* Dark theme contrast: replace legacy light-only surfaces before applying text colors. */
+[data-theme="dark"] .proof-grid article,
+[data-theme="dark"] .auth-form,
+[data-theme="dark"] .account-panel,
+[data-theme="dark"] .workbench-bottom article,
+[data-theme="dark"] .ai-coach-card,
+[data-theme="dark"] .ai-planning-entry,
+[data-theme="dark"] .ai-inline-entry,
+[data-theme="dark"] .ai-fallback,
+[data-theme="dark"] .ai-direction-card,
+[data-theme="dark"] .ai-plan-builder,
+[data-theme="dark"] .ai-checkpoints > div,
+[data-theme="dark"] .ai-fusion-summary,
+[data-theme="dark"] .explore-top > p,
+[data-theme="dark"] .select-tile-grid button,
+[data-theme="dark"] .direction-option,
+[data-theme="dark"] .context-chain > div,
+[data-theme="dark"] .inline-insight,
+[data-theme="dark"] .job-options button,
+[data-theme="dark"] .roadmap-overview > div,
+[data-theme="dark"] .diagnosis-explainer,
+[data-theme="dark"] .graduate-hero,
+[data-theme="dark"] .graduate-hero .progress-rail,
+[data-theme="dark"] .outcome-cards > div,
+[data-theme="dark"] .teaching-action,
+[data-theme="dark"] .opportunity-hero,
+[data-theme="dark"] .opportunity-profile,
+[data-theme="dark"] .opportunity-filter,
+[data-theme="dark"] .teacher-governance {
+  border-color: var(--line);
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+[data-theme="dark"] .auth-form,
+[data-theme="dark"] .account-panel,
+[data-theme="dark"] .proof-grid article,
+[data-theme="dark"] .ai-direction-card {
+  background: var(--surface);
+}
+[data-theme="dark"] .teacher-callout,
+[data-theme="dark"] .ability-next-step,
+[data-theme="dark"] .quick-add,
+[data-theme="dark"] .action-completion-standard,
+[data-theme="dark"] .path-save-panel {
+  background: #332b25;
+  color: var(--ink);
+}
+[data-theme="dark"] .stage-choice:hover,
+[data-theme="dark"] .stage-choice.is-selected,
+[data-theme="dark"] .option-chips input:checked + span,
+[data-theme="dark"] .ai-direction-card.is-selected,
+[data-theme="dark"] .explore-steps button.is-active,
+[data-theme="dark"] .select-tile-grid button.is-selected,
+[data-theme="dark"] .direction-option:hover,
+[data-theme="dark"] .direction-option.is-selected,
+[data-theme="dark"] .task-row.is-complete,
+[data-theme="dark"] .path-selector button.is-active,
+[data-theme="dark"] .job-options button:hover,
+[data-theme="dark"] .job-options button.is-selected,
+[data-theme="dark"] .opportunity-filter button:hover,
+[data-theme="dark"] .opportunity-filter button.is-active,
+[data-theme="dark"] .research-lane {
+  border-color: var(--signal-dark);
+  background: #3d2c24;
+  color: #f4e9e2;
+}
+[data-theme="dark"] .option-chips input:checked + span,
+[data-theme="dark"] .path-selector button.is-active span,
+[data-theme="dark"] .select-tile-grid button.is-selected,
+[data-theme="dark"] .explore-steps button.is-active {
+  color: #f4c8b2;
+}
+[data-theme="dark"] input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  caret-color: var(--ink);
+  color-scheme: dark;
+}
+[data-theme="dark"] input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):hover,
+[data-theme="dark"] input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):focus,
+[data-theme="dark"] select:hover,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:hover,
+[data-theme="dark"] textarea:focus {
+  background: var(--surface);
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--faint);
+  opacity: 1;
+}
+[data-theme="dark"] .setup-step label,
+[data-theme="dark"] .graduate-input-grid label,
+[data-theme="dark"] .quick-add label,
+[data-theme="dark"] .large-field,
+[data-theme="dark"] .opportunity-evidence label,
+[data-theme="dark"] .teacher-publish-form label {
+  color: var(--muted);
+}
+[data-theme="dark"] .ai-icon {
+  background: #4b3025;
+  color: #f0ad8d;
+}
+[data-theme="dark"] .ai-fallback svg,
+[data-theme="dark"] .teacher-governance > svg {
+  color: var(--signal-dark);
+}
+[data-theme="dark"] .ai-fit-label,
+[data-theme="dark"] .notification-badge,
+[data-theme="dark"] .opportunity-card-meta small,
+[data-theme="dark"] .staff-tabs button > span,
+[data-theme="dark"] .action-item-meta .is-overdue {
+  background: #4b3025;
+  color: #f0ad8d;
+}
+[data-theme="dark"] .ai-direction-card > small,
+[data-theme="dark"] .direction-option small,
+[data-theme="dark"] .teacher-governance p,
+[data-theme="dark"] .opportunity-card dd,
+[data-theme="dark"] .opportunity-tags span,
+[data-theme="dark"] .opportunity-source > span {
+  color: var(--muted);
+}
+[data-theme="dark"] .opportunity-tags span {
+  background: var(--surface-soft);
+}
+[data-theme="dark"] .inline-insight,
+[data-theme="dark"] .ai-reflection-question,
+[data-theme="dark"] .teacher-notice {
+  border-color: var(--signal-dark);
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+[data-theme="dark"] .explore-actions {
+  background: color-mix(in srgb, var(--surface) 93%, transparent);
+}
+[data-theme="dark"] .job-search > div button:hover {
+  background: var(--surface-soft);
+}
+[data-theme="dark"] .task-reflection {
+  color: #b8d6aa;
+}
+[data-theme="dark"] .tone-warm strong,
+[data-theme="dark"] .gap-list b,
+[data-theme="dark"] .opportunity-card-meta span,
+[data-theme="dark"] .opportunity-source a,
+[data-theme="dark"] .teacher-resource-grid a,
+[data-theme="dark"] .opportunity-source > span.is-completed,
+[data-theme="dark"] .opportunity-source > span.is-applied {
+  color: var(--signal-dark);
+}
 [data-theme="dark"] .button-secondary { background: #533729; color: #f4c8b2; }
-[data-theme="dark"] .teacher-callout, [data-theme="dark"] .ability-next-step, [data-theme="dark"] .quick-add { background: #332b25; }
-[data-theme="dark"] .action-item-meta .is-overdue { background: #4b3025; color: #f0ad8d; }
-[data-theme="dark"] .action-completion-standard { background: #332b25; }
-[data-theme="dark"] .notification-badge, [data-theme="dark"] .opportunity-card-meta small, [data-theme="dark"] .staff-tabs button > span { background: #4b3025; color: #f0ad8d; }
-[data-theme="dark"] .save-message, [data-theme="dark"] .staff-message { border-color: #654b3e; background: #3d2c24; color: #edb398; }
-[data-theme="dark"] .resource-feedback.is-warning { background: #422e24; color: #e6a37f; }
-[data-theme="dark"] .resource-feedback.is-success { background: #29362d; color: #9ec3a4; }
-[data-theme="dark"] .teacher-resource-empty, [data-theme="dark"] .opportunity-empty { border-color: var(--line-strong); background: var(--surface); color: var(--ink); }
+[data-theme="dark"] .save-message,
+[data-theme="dark"] .staff-message {
+  border-color: #654b3e;
+  background: #3d2c24;
+  color: #edb398;
+}
+[data-theme="dark"] .storage-warning,
+[data-theme="dark"] .resource-feedback.is-warning {
+  border-color: #76513d;
+  background: #422e24;
+  color: #efb08f;
+}
+[data-theme="dark"] .ai-error,
+[data-theme="dark"] .graduate-plan-error,
+[data-theme="dark"] .opportunity-error {
+  border-color: #78483b;
+  background: #432925;
+  color: #f0ad94;
+}
+[data-theme="dark"] .resource-feedback.is-pending {
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+[data-theme="dark"] .resource-feedback.is-success {
+  background: #29362d;
+  color: #add1b3;
+}
+[data-theme="dark"] .teacher-publish-actions span {
+  color: #edb398;
+}
+[data-theme="dark"] .teacher-resource-empty,
+[data-theme="dark"] .opportunity-empty {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+}
+[data-theme="dark"] .opportunity-card.is-closed .opportunity-card-meta small {
+  background: var(--surface-soft);
+  color: var(--muted);
+}
 [data-theme="dark"] .learning-path-graph { background: #28231f; }
 [data-theme="dark"] .graph-node rect { fill: #302a25; stroke: #574d45; }
 [data-theme="dark"] .graph-node.is-now rect { fill: #3d2b24; }
 [data-theme="dark"] .graph-node.is-next rect { fill: #29362d; }
 [data-theme="dark"] .graph-node-title { fill: #f0e7df; }
 [data-theme="dark"] .graph-node-kind, [data-theme="dark"] .graph-node-semester, [data-theme="dark"] .graph-phase-title { fill: #b5a89e; }
-[data-theme="dark"] .path-save-panel { background: #332b25; }
 [data-theme="dark"] .course-status.is-completed { background: #29362d; color: #9ec3a4; }
 [data-theme="dark"] .course-status.is-current { background: #4b3025; color: #f0ad8d; }
-[data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea { color-scheme: dark; }
 
 @media (max-width: 1060px) {
   .app-shell { grid-template-columns: 78px minmax(0, 1fr); }
