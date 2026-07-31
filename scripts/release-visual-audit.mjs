@@ -81,6 +81,22 @@ async function capture(name, path, options = {}) {
   results.push({ name, ...metrics, overflow: metrics.scrollWidth > metrics.width });
 }
 
+async function captureCurrent(name) {
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    window.scrollTo(0, 0);
+  });
+  const metrics = await page.evaluate(() => ({
+    path: location.pathname,
+    width: window.innerWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    title: document.title,
+  }));
+  await page.screenshot({ path: resolve(outputDir, `${name}.png`), fullPage: true });
+  results.push({ name, ...metrics, overflow: metrics.scrollWidth > metrics.width });
+}
+
 async function registerAuditAccount(email) {
   accountSequence += 1;
   const response = await page.context().request.post(`${apiBaseURL}/auth/register`, {
@@ -125,8 +141,63 @@ await page.getByRole("button", { name: "方向设计" }).click();
 await page.locator(".direction-option").first().click();
 await page.getByRole("button", { name: "行动创造" }).click();
 await page.getByRole("button", { name: "生成探索行动计划" }).click();
+await page.locator(".task-toggle").first().click();
 await capture("05-explorer-roadmap-desktop", "/student/roadmap", { openFirstBlueprint: true });
+await page.route("**/api/healthz", async (route) => route.fulfill({ json: { status: "ok", provider: "deepseek", model: "deepseek-v4-flash", ai: "ready" } }));
+await page.route("**/api/planning/directions", async (route) => route.fulfill({ json: {
+  result: {
+    overview: "先用校园 AI 小作品验证方向。",
+    candidates: [{
+      id: "visual-ai-campus",
+      title: "校园 AI 应用开发",
+      specialization: "围绕真实校园问题完成小应用",
+      fit: "优先验证",
+      rationale: "与当前探索方向一致。",
+      problemExamples: ["校园问答"],
+      evidenceNeeded: ["可运行作品", "用户反馈"],
+      tradeoffs: "需要控制范围。",
+      firstExperiment: { title: "完成 API 调用小作品", detail: "实现最小闭环。", successSignal: "一名同学可以试用。" },
+    }],
+    reflectionQuestion: "完成后是否愿意继续解决同类问题？",
+  },
+  meta: { provider: "deepseek", model: "deepseek-v4-flash", generatedAt: "2026-07-31T00:00:00.000Z" },
+} }));
+await page.route("**/api/planning/actions", async (route) => route.fulfill({ json: {
+  result: {
+    directionTitle: "校园 AI 应用开发",
+    objective: "四周内完成一次校园 AI 应用方向验证。",
+    strategy: "以 AI 计划为主线，复用已经完成的探索证据。",
+    tasks: [{
+      title: "完成一个 AI API 调用小作品",
+      detail: "实现输入、调用和结果展示。",
+      week: "第 1–2 周",
+      evidence: "可运行链接和一页说明",
+      priority: "high",
+      category: "project",
+    }, {
+      title: "完成一次用户测试并整理结论",
+      detail: "邀请一名同学试用并完成一次修正。",
+      week: "第 3–4 周",
+      evidence: "测试记录和改进清单",
+      priority: "medium",
+      category: "practice",
+    }],
+    checkpoints: [{ week: "第 2 周", question: "是否已经形成可运行闭环？" }],
+    risks: ["范围过大"],
+  },
+  meta: { provider: "deepseek", model: "deepseek-v4-flash", generatedAt: "2026-07-31T00:00:00.000Z" },
+} }));
+await page.goto(`${baseURL}/student/ai-planning`, { waitUntil: "networkidle" });
+await page.getByText("教育科技", { exact: true }).click();
+await page.getByRole("button", { name: "生成 3 个细分方向" }).click();
+await page.getByRole("button", { name: /校园 AI 应用开发/ }).click();
+await page.getByRole("button", { name: "生成个性化行动计划" }).click();
+await page.getByRole("button", { name: "保存并融合行动计划" }).click();
+await page.getByText("已融合为一份行动计划").waitFor();
+await captureCurrent("05a-ai-fusion-result-desktop");
+await capture("05b-fused-roadmap-desktop", "/student/roadmap", { openFirstBlueprint: true });
 await page.setViewportSize({ width: 390, height: 844 });
+await capture("05c-fused-roadmap-mobile", "/student/roadmap", { openFirstBlueprint: true });
 await capture("06-awakening-mobile", "/student/awakening");
 await capture("07-explorer-roadmap-mobile", "/student/roadmap", { openFirstBlueprint: true });
 await page.evaluate(() => localStorage.setItem("career-theme", "dark"));

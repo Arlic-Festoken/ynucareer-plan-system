@@ -165,6 +165,62 @@ describe("school pilot workflow", () => {
     database.close();
   });
 
+  it("reconciles generated plans without deleting actions that contain student progress", async () => {
+    const { database, pilot, accounts } = setup();
+    const student = (await accounts.register({ email: "fusion@ynu.edu.cn", password: "1234567890", displayName: "融合计划同学" })).user;
+    const stale = pilot.createAction(student, {
+      title: "完成校园数据可视化",
+      detail: "旧的泛化探索任务。",
+      source: "rule",
+      sourceId: "explore-stale",
+      category: "project",
+      lane: "exploration",
+    });
+    const completed = pilot.createAction(student, {
+      title: "完成学习场景观察卡",
+      detail: "已经完成并留下反思。",
+      source: "rule",
+      sourceId: "explore-completed",
+      category: "practice",
+      lane: "exploration",
+    });
+    pilot.updateAction(student, completed.id, { status: "completed", reflection: "确认自己愿意继续探索。" });
+    pilot.createAction(student, {
+      title: "自行添加的行动",
+      detail: "不能被自动计划同步删除。",
+      source: "manual",
+      category: "practice",
+      lane: "exploration",
+    });
+
+    const actions = pilot.reconcileGeneratedActions(student, {
+      lane: "exploration",
+      actions: [{
+        title: "完成公开数据清洗与分析",
+        detail: "AI 主线任务。",
+        source: "ai",
+        sourceId: "ai-plan-data-1",
+        category: "project",
+        lane: "exploration",
+      }, {
+        title: completed.title,
+        detail: completed.detail,
+        source: "rule",
+        sourceId: completed.sourceId,
+        category: completed.category,
+        lane: "exploration",
+      }],
+    });
+
+    expect(actions.map((item: { sourceId: string }) => item.sourceId)).not.toContain(stale.sourceId);
+    expect(actions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source: "ai", sourceId: "ai-plan-data-1", status: "planned" }),
+      expect.objectContaining({ sourceId: completed.sourceId, status: "completed", reflection: "确认自己愿意继续探索。" }),
+      expect.objectContaining({ source: "manual", title: "自行添加的行动" }),
+    ]));
+    database.close();
+  });
+
   it("accepts only HTTPS evidence links and rejects duplicate pending submissions", async () => {
     const { database, pilot, accounts } = setup();
     const student = (await accounts.register({ email: "proof@ynu.edu.cn", password: "1234567890", displayName: "成果同学" })).user;

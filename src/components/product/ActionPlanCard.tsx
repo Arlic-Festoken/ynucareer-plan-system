@@ -31,6 +31,7 @@ export default function ActionPlanCard({ action, index, onAdvance, onEvidence }:
       <div className="action-item-meta">
         <span>{String(index + 1).padStart(2, "0")}</span>
         <span>{categoryLabels[action.category]}</span>
+        <span>{copy.sourceLabel}</span>
         <span>{statusLabels[action.status]}</span>
         <span className={copy.isOverdue ? "is-overdue" : ""}><CalendarDays size={12} />{copy.scheduleLabel}</span>
       </div>

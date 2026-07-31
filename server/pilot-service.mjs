@@ -365,6 +365,49 @@ export function createPilotService(database, options = {}) {
     return mapAction(saved);
   }
 
+  function reconcileGeneratedActions(user, input) {
+    if (!user) throw new Error("authentication_required");
+    const lane = ["exploration", "growth"].includes(input?.lane) ? input.lane : "";
+    const actions = Array.isArray(input?.actions) ? input.actions.slice(0, 50) : [];
+    if (!lane || !actions.length || actions.some((action) => !["rule", "ai"].includes(action?.source))) {
+      throw new Error("invalid_action_plan");
+    }
+
+    const reconcile = sql.transaction(() => {
+      const activeKeys = new Set();
+      actions.forEach((action) => {
+        const sourceId = text(action?.sourceId, 120);
+        if (!sourceId) throw new Error("invalid_action_plan");
+        const saved = createAction(user, { ...action, lane, sourceId });
+        activeKeys.add(`${saved.source}:${saved.sourceId}`);
+        if (action?.status === "completed" || text(action?.reflection, 600)) {
+          updateAction(user, saved.id, {
+            status: action?.status === "completed" ? "completed" : saved.status,
+            reflection: action?.reflection ?? saved.reflection,
+          });
+        }
+      });
+
+      const stale = sql.prepare(`
+        SELECT id, source, source_id
+        FROM action_items
+        WHERE user_id = ? AND lane = ? AND source IN ('rule', 'ai')
+          AND status = 'planned' AND reflection = ''
+          AND NOT EXISTS (
+            SELECT 1 FROM evidence_records WHERE evidence_records.action_item_id = action_items.id
+          )
+      `).all(user.id, lane);
+      stale.forEach((action) => {
+        if (activeKeys.has(`${action.source}:${action.source_id}`)) return;
+        sql.prepare("DELETE FROM action_items WHERE id = ? AND user_id = ?").run(action.id, user.id);
+        audit(user.id, "action.superseded", "action", action.id, { lane, source: action.source });
+      });
+    });
+
+    reconcile();
+    return listActions(user);
+  }
+
   function updateAction(user, actionId, input) {
     if (!user) throw new Error("authentication_required");
     const row = sql.prepare("SELECT * FROM action_items WHERE id = ? AND user_id = ?").get(actionId, user.id);
@@ -899,6 +942,7 @@ export function createPilotService(database, options = {}) {
     updateAbilityProfile,
     listActions,
     createAction,
+    reconcileGeneratedActions,
     updateAction,
     submitEvidence,
     listForStudent,

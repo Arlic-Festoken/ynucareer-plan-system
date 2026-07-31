@@ -3,11 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getCoachStatus, type CoachStatus } from "../api/careerCoach";
 import { requestDirectionCandidates, requestPersonalizedPlan } from "../api/careerPlanner";
+import { reconcileGeneratedActions } from "../api/pilot";
 import PageShell from "../components/common/PageShell";
 import TaskList from "../components/common/TaskList";
 import type { ActionTask, AiActionPlan, AiDirectionCandidate, GenerationTrace } from "../domain";
 import { mergeActionDetail } from "../services/actionPlan";
-import { preserveTaskProgress, recommendDirections } from "../services/recommendation";
+import { mergeAiPrimaryPlan, type PlanFusionSummary } from "../services/planFusion";
+import { recommendDirections } from "../services/recommendation";
 import { useCareerStore } from "../store/careerStore";
 
 const sceneOptions = ["教育科技", "人工智能应用", "数据与商业", "智慧医疗", "智能制造", "数字公共服务"];
@@ -38,8 +40,10 @@ export default function AiPlanningPage() {
   const [checking, setChecking] = useState(true);
   const [directionLoading, setDirectionLoading] = useState(false);
   const [planLoading, setPlanLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [fusionSummary, setFusionSummary] = useState<PlanFusionSummary | null>(null);
   const selected = aiPlanning.directionResult?.candidates.find((item) => item.id === aiPlanning.selectedCandidateId) ?? null;
   const ruleDirections = useMemo(() => recommendDirections(profile).slice(0, 3), [profile]);
 
@@ -93,18 +97,45 @@ export default function AiPlanningPage() {
     }
   }
 
-  function savePlan() {
+  async function savePlan() {
     if (!selected || !aiPlanning.actionPlan) return;
     const nextTasks = toTasks(selected, aiPlanning.actionPlan.tasks, aiPlanning.generationTrace);
+    const existingTasks = profile.grade <= 2 ? awakening.actionTasks : roadmapTasks;
+    const fusion = mergeAiPrimaryPlan(nextTasks, existingTasks);
+    const lane = profile.grade <= 2 ? "exploration" as const : "growth" as const;
+    setSaving(true);
+    setError("");
     if (profile.grade <= 2) {
       setAwakening({
         selectedDirectionId: selected.id,
-        actionTasks: preserveTaskProgress(nextTasks, awakening.actionTasks),
+        actionTasks: fusion.tasks,
       });
     } else {
-      setRoadmapTasks(preserveTaskProgress(nextTasks, roadmapTasks));
+      setRoadmapTasks(fusion.tasks);
     }
-    setSaved(true);
+    setFusionSummary(fusion.summary);
+    try {
+      await reconcileGeneratedActions({
+        lane,
+        actions: fusion.tasks.map((task) => ({
+          title: task.title,
+          detail: task.detail,
+          category: task.category,
+          lane,
+          source: task.id.startsWith("ai-plan-") ? "ai" : "rule",
+          sourceId: task.id,
+          dueDate: task.dueDate,
+          status: task.completed ? "completed" : "planned",
+          reflection: task.reflection,
+          trace: task.provenance,
+        })),
+      });
+    } catch (reason) {
+      setError(reason instanceof Error ? `计划已保存在本机；账号同步暂未完成：${reason.message}` : "计划已保存在本机；账号同步暂未完成。");
+    } finally {
+      setSaving(false);
+      setSaved(true);
+    }
   }
 
   const previewTasks = aiPlanning.actionPlan ? toTasks(selected as AiDirectionCandidate, aiPlanning.actionPlan.tasks, aiPlanning.generationTrace) : [];
@@ -148,7 +179,8 @@ export default function AiPlanningPage() {
       <div className="ai-section-heading"><div><span className="section-kicker">DeepSeek 规划结果</span><h2>{aiPlanning.actionPlan.objective}</h2><p>{aiPlanning.actionPlan.strategy}</p></div><span className="ai-plan-count">{aiPlanning.actionPlan.tasks.length}<small>项行动</small></span></div>
       <TaskList readOnly tasks={previewTasks} />
       <div className="ai-checkpoints"><div><span className="section-kicker">复盘节点</span>{aiPlanning.actionPlan.checkpoints.map((item) => <p key={`${item.week}-${item.question}`}><strong>{item.week}</strong>{item.question}</p>)}</div>{aiPlanning.actionPlan.risks.length > 0 && <div><span className="section-kicker">注意偏差</span>{aiPlanning.actionPlan.risks.map((risk) => <p key={risk}>{risk}</p>)}</div>}</div>
-      <div className="ai-save-plan"><button className="button button-primary" onClick={savePlan} type="button"><Check size={17} />保存到行动计划</button>{saved && <Link className="button button-secondary" to="/student/roadmap">已保存，查看行动计划 <ArrowRight size={16} /></Link>}</div>
+      {fusionSummary && <div className="ai-fusion-summary" role="status"><div><Check size={18} /><strong>已融合为一份行动计划</strong></div><span>AI 主线 {fusionSummary.aiCount} 项</span><span>保留探索 {fusionSummary.retainedExplorationCount} 项</span><span>替换重复 {fusionSummary.replacedCount} 项</span><span>历史记录 {fusionSummary.preservedHistoryCount} 项</span></div>}
+      <div className="ai-save-plan"><button className="button button-primary" disabled={saving} onClick={() => void savePlan()} type="button"><Check size={17} />{saving ? "正在融合并同步…" : "保存并融合行动计划"}</button>{saved && <Link className="button button-secondary" to="/student/roadmap">已保存，查看行动计划 <ArrowRight size={16} /></Link>}</div>
     </section>}
   </PageShell>;
 }

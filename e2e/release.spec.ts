@@ -76,6 +76,87 @@ test("route guards, 404 and AI fallback behave safely", async ({ page, request, 
   expect([200, 503]).toContain(directions.status());
 });
 
+test("low-year AI planning fuses exploration tasks into one authoritative plan", async ({ page }) => {
+  await page.route("**/api/healthz", async (route) => route.fulfill({ json: { status: "ok", provider: "deepseek", model: "deepseek-v4-flash", ai: "ready" } }));
+  await page.route("**/api/planning/directions", async (route) => route.fulfill({
+    json: {
+      result: {
+        overview: "先用一个校园 AI 小作品验证方向，再决定是否继续投入。",
+        candidates: [{
+          id: "ai-campus-builder",
+          title: "校园 AI 应用开发",
+          specialization: "围绕真实校园问题完成可测试的小应用",
+          fit: "优先验证",
+          rationale: "与当前兴趣和已选择的 AI 应用方向一致。",
+          problemExamples: ["校园问答", "学习辅助"],
+          evidenceNeeded: ["可运行作品", "一次用户反馈"],
+          tradeoffs: "需要控制范围，先完成最小版本。",
+          firstExperiment: { title: "完成 API 调用小作品", detail: "实现最小闭环。", successSignal: "一名同学可以完成试用。" },
+        }],
+        reflectionQuestion: "完成作品后，你是否愿意继续解决同类问题？",
+      },
+      meta: { provider: "deepseek", model: "deepseek-v4-flash", generatedAt: "2026-07-31T00:00:00.000Z" },
+    },
+  }));
+  await page.route("**/api/planning/actions", async (route) => route.fulfill({
+    json: {
+      result: {
+        directionTitle: "校园 AI 应用开发",
+        objective: "四周内完成一次校园 AI 应用方向验证。",
+        strategy: "以 AI 计划为主线，并复用已经完成的探索证据。",
+        tasks: [{
+          title: "完成一个 AI API 调用小作品",
+          detail: "选择校园问答场景，实现输入、调用和结果展示。",
+          week: "第 1–2 周",
+          evidence: "可运行链接和一页说明",
+          priority: "high",
+          category: "project",
+        }, {
+          title: "完成一次用户测试并整理结论",
+          detail: "邀请一名同学试用，记录问题并完成一次修正。",
+          week: "第 3–4 周",
+          evidence: "测试记录和改进清单",
+          priority: "medium",
+          category: "practice",
+        }],
+        checkpoints: [{ week: "第 2 周", question: "是否已经形成可运行闭环？" }],
+        risks: ["范围过大，迟迟没有可测试版本"],
+      },
+      meta: { provider: "deepseek", model: "deepseek-v4-flash", generatedAt: "2026-07-31T00:00:00.000Z" },
+    },
+  }));
+
+  await onboardRole(page, "低年级学生");
+  await page.goto("/student/awakening");
+  await page.getByRole("button", { name: /方向设计/ }).click();
+  await page.getByRole("button", { name: /AI 应用开发/ }).click();
+  await page.getByRole("button", { name: /行动创造/ }).click();
+  await page.getByRole("button", { name: "生成探索行动计划" }).click();
+  await page.getByRole("button", { name: "完成：完成一个 API 调用小作品" }).click();
+  await page.goto("/student/roadmap");
+  await expect(page.locator(".action-item").filter({ hasText: "完成一个 API 调用小作品" })).toBeVisible();
+
+  await page.goto("/student/ai-planning");
+  await page.getByText("教育科技", { exact: true }).click();
+  await page.getByRole("button", { name: "生成 3 个细分方向" }).click();
+  await page.getByRole("button", { name: /校园 AI 应用开发/ }).click();
+  await page.getByRole("button", { name: "生成个性化行动计划" }).click();
+  await page.getByRole("button", { name: "保存并融合行动计划" }).click();
+  await expect(page.getByText("已融合为一份行动计划")).toBeVisible();
+  await expect(page.getByText("AI 主线 2 项")).toBeVisible();
+  await expect(page.getByText("替换重复 1 项")).toBeVisible();
+  await page.getByRole("link", { name: /已保存，查看行动计划/ }).click();
+
+  await expect(page.getByText("AI 主线", { exact: true })).toBeVisible();
+  await expect(page.getByText("探索补充", { exact: true })).toBeVisible();
+  await expect(page.getByText("历史成果", { exact: true })).toBeVisible();
+  await expect(page.locator(".action-item").filter({ hasText: "完成一个 AI API 调用小作品" })).toBeVisible();
+  await expect(page.locator(".action-item").filter({ hasText: "建立 AI 应用案例夹" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("AI 主线", { exact: true })).toBeVisible();
+  await expect(page.locator(".action-item").filter({ hasText: "完成一个 AI API 调用小作品" })).toHaveCount(1);
+});
+
 test("DeepSeek planning flow creates candidates and saves a personalized plan", async ({ page }) => {
   await page.route("**/api/healthz", async (route) => route.fulfill({ json: { status: "ok", provider: "deepseek", model: "deepseek-v4-flash", ai: "ready" } }));
   await page.route("**/api/planning/directions", async (route) => route.fulfill({
@@ -129,7 +210,7 @@ test("DeepSeek planning flow creates candidates and saves a personalized plan", 
   await page.getByRole("button", { name: /学习产品数据分析/ }).click();
   await page.getByRole("button", { name: "生成个性化行动计划" }).click();
   await expect(page.getByRole("heading", { name: "八周内完成一次学习产品数据分析方向验证。" })).toBeVisible();
-  await page.getByRole("button", { name: "保存到行动计划" }).click();
+  await page.getByRole("button", { name: "保存并融合行动计划" }).click();
   await page.getByRole("link", { name: /已保存，查看行动计划/ }).click();
   const savedAction = page.locator(".action-item").filter({ hasText: "定义一个学习产品问题" });
   await expect(savedAction.locator(".action-item-title")).toHaveText("定义一个学习产品问题");

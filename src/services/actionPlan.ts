@@ -114,3 +114,21 @@ export function summarizeActions(actions: ActionItem[]): ActionPlanSummary {
     completed: actions.filter((action) => action.status === "completed").length,
   };
 }
+
+export function groupActionsForPlan(actions: ActionItem[], explorer: boolean): Array<[string, ActionItem[]]> {
+  const preferredOrder = ["AI 主线", "探索补充", "历史成果", "自主行动", "校内资源", "成长行动", "科研推进", "职业准备"];
+  const groups = new Map<string, ActionItem[]>();
+  actions.forEach((action) => {
+    const label = action.source === "ai" ? "AI 主线"
+      : explorer && action.source === "rule" && action.status === "completed" ? "历史成果"
+        : explorer && action.source === "rule" ? "探索补充"
+          : action.source === "manual" ? "自主行动"
+            : action.source === "opportunity" ? "校内资源"
+              : action.lane === "research" ? "科研推进"
+                : action.lane === "career" ? "职业准备"
+                  : "成长行动";
+    groups.set(label, [...(groups.get(label) || []), action]);
+  });
+  return [...groups.entries()].sort((left, right) =>
+    preferredOrder.indexOf(left[0]) - preferredOrder.indexOf(right[0]));
+}

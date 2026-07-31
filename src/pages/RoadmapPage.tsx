@@ -1,12 +1,12 @@
 import { ArrowRight, CalendarDays, Clock3, FileUp, Layers3, LoaderCircle, Plus, Save, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { createAction, getActions, submitActionEvidence, updateAction } from "../api/pilot";
+import { createAction, getActions, reconcileGeneratedActions, submitActionEvidence, updateAction } from "../api/pilot";
 import PageShell from "../components/common/PageShell";
 import ActionPlanCard from "../components/product/ActionPlanCard";
 import EmptyState from "../components/product/EmptyState";
 import ProgressRail from "../components/product/ProgressRail";
 import type { ActionItem } from "../domain";
-import { presentAction, selectFocusAction, summarizeActions } from "../services/actionPlan";
+import { groupActionsForPlan, presentAction, selectFocusAction, summarizeActions } from "../services/actionPlan";
 import { useCareerStore } from "../store/careerStore";
 
 const categoryLabels = { course: "课程", project: "项目", practice: "实践", reflection: "反思", research: "科研", career: "生涯" };
@@ -39,9 +39,11 @@ export default function RoadmapPage() {
     let active = true;
     async function load() {
       try {
-        let remote = (await getActions()).actions;
-        if (!remote.length && localTasks.length) {
-          const imported = await Promise.all(localTasks.map((task) => createAction({
+        let remote;
+        if (localTasks.length) {
+          remote = (await reconcileGeneratedActions({
+            lane: localLane(explorer),
+            actions: localTasks.map((task) => ({
             title: task.title,
             detail: task.detail,
             category: task.category,
@@ -50,8 +52,12 @@ export default function RoadmapPage() {
             sourceId: task.id,
             dueDate: task.dueDate,
             trace: task.provenance,
-          }).then(({ action }) => task.completed ? updateAction(action.id, { status: "completed", reflection: task.reflection || "" }).then((result) => result.action) : action)));
-          remote = imported;
+            status: task.completed ? "completed" : "planned",
+            reflection: task.reflection,
+          })),
+          })).actions;
+        } else {
+          remote = (await getActions()).actions;
         }
         if (active) setActions(remote);
       } catch (reason) {
@@ -64,14 +70,7 @@ export default function RoadmapPage() {
     return () => { active = false; };
   }, [explorer, localTasks]);
 
-  const groups = useMemo(() => {
-    const lanes = new Map<string, ActionItem[]>();
-    actions.forEach((action) => {
-      const label = action.lane === "exploration" ? "方向探索" : action.lane === "research" ? "科研推进" : action.lane === "career" ? "职业准备" : "成长行动";
-      lanes.set(label, [...(lanes.get(label) || []), action]);
-    });
-    return [...lanes.entries()];
-  }, [actions]);
+  const groups = useMemo(() => groupActionsForPlan(actions, explorer), [actions, explorer]);
   const summary = useMemo(() => summarizeActions(actions), [actions]);
   const focusAction = useMemo(() => selectFocusAction(actions), [actions]);
   const focusCopy = focusAction ? presentAction(focusAction) : null;

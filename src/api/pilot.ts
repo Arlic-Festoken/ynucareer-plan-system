@@ -79,6 +79,13 @@ export function createAction(input: Partial<ActionItem> & Pick<ActionItem, "titl
   return request<{ action: ActionItem }>("/me/actions", { method: "POST", body: JSON.stringify(input) });
 }
 
+export function reconcileGeneratedActions(input: {
+  lane: "exploration" | "growth";
+  actions: Array<Partial<ActionItem> & Pick<ActionItem, "title" | "detail" | "source" | "sourceId">>;
+}) {
+  return request<{ actions: ActionItem[] }>("/me/actions/reconcile", { method: "POST", body: JSON.stringify(input) });
+}
+
 export function updateAction(id: string, input: Partial<Pick<ActionItem, "status" | "reflection">>) {
   return request<{ action: ActionItem }>(`/me/actions/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
 }

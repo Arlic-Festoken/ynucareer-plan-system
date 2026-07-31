@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ActionItem } from "../domain";
 import {
+  groupActionsForPlan,
   mergeActionDetail,
   presentAction,
   selectFocusAction,
@@ -85,5 +86,17 @@ describe("action plan presentation", () => {
     const result = mergeActionDetail("准备材料；完成分析；整理结论。", "提交一页成果记录");
     expect(result).toContain("\n完成标准：提交一页成果记录");
     expect(result.length).toBeLessThanOrEqual(500);
+  });
+
+  it("presents a low-year fused plan as AI main line, exploration support and history", () => {
+    const groups = groupActionsForPlan([
+      action({ id: "rule-active", lane: "exploration", source: "rule", status: "planned" }),
+      action({ id: "rule-done", lane: "exploration", source: "rule", status: "completed" }),
+      action({ id: "ai-main", lane: "exploration", source: "ai", status: "planned" }),
+    ], true);
+
+    expect(groups.map(([label]) => label)).toEqual(["AI 主线", "探索补充", "历史成果"]);
+    expect(groups[0][1].map((item) => item.id)).toEqual(["ai-main"]);
+    expect(groups[2][1].map((item) => item.id)).toEqual(["rule-done"]);
   });
 });

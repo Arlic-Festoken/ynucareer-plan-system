@@ -47,6 +47,7 @@ export function isPilotPath(path) {
   return path === "/me/dashboard"
     || path === "/me/ability-profile"
     || path === "/me/actions"
+    || path === "/me/actions/reconcile"
     || /^\/me\/actions\/[^/]+$/.test(path)
     || path === "/me/evidence"
     || path === "/me/notifications"
@@ -71,6 +72,7 @@ export function handlePilotRequest(request, accountService, pilotService) {
     if (method === "PATCH" && path === "/me/ability-profile") return response(200, { profile: pilotService.updateAbilityProfile(user, body) });
     if (method === "GET" && path === "/me/actions") return response(200, { actions: pilotService.listActions(user) });
     if (method === "POST" && path === "/me/actions") return response(201, { action: pilotService.createAction(user, body) });
+    if (method === "POST" && path === "/me/actions/reconcile") return response(200, { actions: pilotService.reconcileGeneratedActions(user, body) });
     const action = path.match(/^\/me\/actions\/([^/]+)$/);
     if (method === "PATCH" && action) return response(200, { action: pilotService.updateAction(user, decodeURIComponent(action[1]), body) });
     if (method === "POST" && path === "/me/evidence") return response(201, { evidence: pilotService.submitEvidence(user, body) });
