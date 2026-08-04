@@ -47,6 +47,7 @@ export type ActionTask = {
   priority: "high" | "medium" | "low";
   semester: string;
   completed: boolean;
+  estimatedHours?: number;
   reflection?: string;
   evidence?: string[];
   opportunityId?: string;
@@ -66,6 +67,7 @@ export type GenerationTrace = {
   generatedAt: string;
   resourceIds: string[];
   autonomous: boolean;
+  taskPriority?: ActionTask["priority"];
 };
 
 export type ActionItem = {
@@ -272,6 +274,7 @@ export type AiActionPlan = {
     evidence: string;
     priority: ActionTask["priority"];
     category: ActionTask["category"];
+    estimatedHours?: number;
   }>;
   checkpoints: Array<{ week: string; question: string }>;
   risks: string[];

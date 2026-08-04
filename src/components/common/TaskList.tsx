@@ -25,7 +25,7 @@ export default function TaskList({ tasks, onToggle, onSaveReflection, emptyMessa
         {task.completed ? <CheckCircle2 aria-hidden="true" size={21} /> : <Circle aria-hidden="true" size={21} />}
       </button>}
       <div className="task-row-copy">
-        <span className="task-row-meta">{task.semester} · {categoryLabels[task.category]} · {task.priority === "high" ? "优先完成" : task.priority === "medium" ? "持续推进" : "保持关注"}</span>
+        <span className="task-row-meta">{task.semester} · {categoryLabels[task.category]} · {task.priority === "high" ? "优先完成" : task.priority === "medium" ? "持续推进" : "保持关注"}{task.estimatedHours ? ` · 预计 ${task.estimatedHours} 小时` : ""}</span>
         <strong>{task.title}</strong><small>{task.detail}</small>
         {task.opportunityTitle && <span className="task-opportunity">校内资源 · {task.opportunityTitle}{task.sourceUrl && <a href={task.sourceUrl} rel="noreferrer" target="_blank">查看来源 <ExternalLink size={12} /></a>}</span>}
         {task.completed && task.reflection && <p className="task-reflection"><FileText size={14} /> {task.reflection}</p>}

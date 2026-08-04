@@ -165,6 +165,32 @@ describe("school pilot workflow", () => {
     database.close();
   });
 
+  it("persists editable action priority and protects completed plans from deletion", async () => {
+    const { database, pilot, accounts } = setup();
+    const student = (await accounts.register({ email: "actions@ynu.edu.cn", password: "1234567890", displayName: "计划同学" })).user;
+    const action = pilot.createAction(student, {
+      title: "先做一份方向验证",
+      detail: "先写出问题和第一步。",
+      priority: "high",
+      source: "ai",
+      sourceId: "editable-plan-1",
+      category: "project",
+      lane: "growth",
+    });
+    expect(action.priority).toBe("high");
+    const edited = pilot.updateAction(student, action.id, {
+      title: "改成一份可开始的方向验证",
+      detail: "投入 2 小时，完成一页问题、方法和结果记录。",
+      priority: "low",
+    });
+    expect(edited).toMatchObject({ title: "改成一份可开始的方向验证", priority: "low" });
+    expect(pilot.deleteAction(student, action.id)).toBe(true);
+    const completed = pilot.createAction(student, { title: "保留完成记录", detail: "已经形成成果。", source: "manual", sourceId: "completed-plan", category: "project", lane: "growth" });
+    pilot.updateAction(student, completed.id, { status: "completed" });
+    expect(() => pilot.deleteAction(student, completed.id)).toThrow("action_not_deletable");
+    database.close();
+  });
+
   it("accepts only HTTPS evidence links and rejects duplicate pending submissions", async () => {
     const { database, pilot, accounts } = setup();
     const student = (await accounts.register({ email: "proof@ynu.edu.cn", password: "1234567890", displayName: "成果同学" })).user;

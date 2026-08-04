@@ -15,6 +15,7 @@ const AbilityProfilePage = lazy(() => import("./pages/AbilityProfilePage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const AiPlanningPage = lazy(() => import("./pages/AiPlanningPage"));
 const RoadmapPage = lazy(() => import("./pages/RoadmapPage"));
+const LearningPathPage = lazy(() => import("./pages/LearningPathPage"));
 const GraduatePage = lazy(() => import("./pages/GraduatePage"));
 const AdminDashboardPage = lazy(() => import("./pages/AdminDashboardPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
@@ -36,6 +37,7 @@ export default function App() {
     <Route path="/student/notifications" element={<AuthRoute><RoleRoute allowed={["freshman", "junior", "graduate"]}><NotificationsPage /></RoleRoute></AuthRoute>} />
     <Route path="/student/ai-planning" element={<AuthRoute><RoleRoute allowed={["freshman", "junior"]}><AiPlanningPage /></RoleRoute></AuthRoute>} />
     <Route path="/student/roadmap" element={<AuthRoute><RoleRoute allowed={["freshman", "junior"]}><RoadmapPage /></RoleRoute></AuthRoute>} />
+    <Route path="/student/learning-path" element={<AuthRoute><RoleRoute allowed={["freshman", "junior"]}><LearningPathPage /></RoleRoute></AuthRoute>} />
     <Route path="/graduate/navigation" element={<AuthRoute><RoleRoute allowed={["graduate"]}><GraduatePage /></RoleRoute></AuthRoute>} />
     <Route path="/account/profile" element={<AuthRoute><ProfilePage /></AuthRoute>} />
     <Route path="/teacher/dashboard" element={<AuthRoute><TeacherRoute><AdminDashboardPage /></TeacherRoute></AuthRoute>} />

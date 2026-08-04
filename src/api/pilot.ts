@@ -79,8 +79,12 @@ export function createAction(input: Partial<ActionItem> & Pick<ActionItem, "titl
   return request<{ action: ActionItem }>("/me/actions", { method: "POST", body: JSON.stringify(input) });
 }
 
-export function updateAction(id: string, input: Partial<Pick<ActionItem, "status" | "reflection">>) {
+export function updateAction(id: string, input: Partial<Pick<ActionItem, "title" | "detail" | "priority" | "status" | "reflection">>) {
   return request<{ action: ActionItem }>(`/me/actions/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export function deleteAction(id: string) {
+  return request<{ ok: true }>(`/me/actions/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export function submitActionEvidence(input: {

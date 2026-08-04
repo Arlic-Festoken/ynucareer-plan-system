@@ -101,6 +101,9 @@ export function createAccountService(database, options = {}) {
     getCareerState(userId) {
       return database.getCareerState(userId);
     },
+    getCareerStateRecord(userId) {
+      return database.getCareerStateRecord(userId);
+    },
     saveCareerState(userId, state) {
       if (!state || typeof state !== "object" || Array.isArray(state)) throw new Error("invalid_career_state");
       const serialized = JSON.stringify(state);

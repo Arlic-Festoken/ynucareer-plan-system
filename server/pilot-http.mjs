@@ -24,6 +24,7 @@ function failure(error) {
     opportunity_not_found: "资源不存在或已被移除。",
     evidence_not_found: "成果记录不存在。",
     action_not_found: "行动不存在。",
+    action_not_deletable: "已有成果记录、已完成或来自校内资源的行动不能删除。",
     notification_not_found: "通知不存在。",
     invalid_action: "请完整填写行动名称和说明。",
     invalid_opportunity: "请完整填写资源信息。",
@@ -72,6 +73,7 @@ export function handlePilotRequest(request, accountService, pilotService) {
     if (method === "GET" && path === "/me/actions") return response(200, { actions: pilotService.listActions(user) });
     if (method === "POST" && path === "/me/actions") return response(201, { action: pilotService.createAction(user, body) });
     const action = path.match(/^\/me\/actions\/([^/]+)$/);
+    if (method === "DELETE" && action) return response(200, { ok: pilotService.deleteAction(user, decodeURIComponent(action[1])) });
     if (method === "PATCH" && action) return response(200, { action: pilotService.updateAction(user, decodeURIComponent(action[1]), body) });
     if (method === "POST" && path === "/me/evidence") return response(201, { evidence: pilotService.submitEvidence(user, body) });
     if (method === "GET" && path === "/me/notifications") return response(200, { notifications: pilotService.listNotifications(user) });

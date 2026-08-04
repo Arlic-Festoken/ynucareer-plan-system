@@ -25,7 +25,8 @@ test("low-grade student completes an exploration action", async ({ page }) => {
   await page.getByRole("link", { name: "行动计划" }).click();
   await expect(page.getByRole("heading", { name: "让计划进入真实的时间。" })).toBeVisible();
   await expect(page.getByText("完成一个 API 调用小作品")).toBeVisible();
-  await page.getByLabel("这周想推进的一件事").fill("完成一次实验室开放日观察记录");
+  await page.getByLabel("行动名称").fill("完成一次实验室开放日观察记录");
+  await page.getByLabel("怎么开始").fill("记录现场观察、一个问题和下一步验证方式。");
   await page.getByRole("button", { name: "加入行动" }).click();
   await page.reload();
   await expect(page.getByText("完成一次实验室开放日观察记录")).toBeVisible();

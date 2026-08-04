@@ -102,6 +102,7 @@ function cleanTrace(value, fallbackGenerator = "manual", sourceId = "") {
     generatedAt: text(source.generatedAt, 40),
     resourceIds: stringList(source.resourceIds, 20),
     autonomous: generator === "ai" ? source.autonomous !== false : Boolean(source.autonomous),
+    taskPriority: ["high", "medium", "low"].includes(source.taskPriority) ? source.taskPriority : "medium",
     sourceId: text(sourceId, 120),
   };
 }
@@ -170,6 +171,7 @@ function sanitizeOpportunity(input) {
 }
 
 function mapAction(row) {
+  const rawTrace = parseJson(row.trace_json, {});
   return {
     id: row.id,
     title: row.title,
@@ -178,10 +180,11 @@ function mapAction(row) {
     lane: row.lane,
     source: row.source,
     sourceId: row.source_id,
+    priority: ["high", "medium", "low"].includes(rawTrace.taskPriority) ? rawTrace.taskPriority : "medium",
     status: row.status,
     dueDate: row.due_date,
     reflection: row.reflection,
-    trace: cleanTrace(parseJson(row.trace_json, {}), row.source, row.source_id),
+    trace: cleanTrace(rawTrace, row.source, row.source_id),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -347,7 +350,8 @@ export function createPilotService(database, options = {}) {
     const lane = ["exploration", "growth", "research", "career"].includes(input?.lane) ? input.lane : "growth";
     const source = ["manual", "rule", "ai", "research"].includes(input?.source) ? input.source : "manual";
     const sourceId = text(input?.sourceId, 120) || id;
-    const trace = cleanTrace(input?.trace, source, sourceId);
+    const priority = ["high", "medium", "low"].includes(input?.priority) ? input.priority : "medium";
+    const trace = cleanTrace({ ...(input?.trace || {}), taskPriority: priority }, source, sourceId);
     sql.prepare(`
       INSERT INTO action_items (id, user_id, title, detail, category, lane, source, source_id, status, due_date, reflection, trace_json, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, '', ?, ?, ?)
@@ -361,7 +365,7 @@ export function createPilotService(database, options = {}) {
         updated_at = excluded.updated_at
     `).run(id, user.id, title, detail, category, lane, source, sourceId, validDate(input?.dueDate), JSON.stringify(trace), timestamp, timestamp);
     const saved = sql.prepare("SELECT * FROM action_items WHERE user_id = ? AND source = ? AND source_id = ?").get(user.id, source, sourceId);
-    audit(user.id, saved.id === id ? "action.created" : "action.deduplicated", "action", saved.id, { source });
+    audit(user.id, saved.id === id ? "action.created" : "action.deduplicated", "action", saved.id, { source, priority });
     return mapAction(saved);
   }
 
@@ -370,12 +374,29 @@ export function createPilotService(database, options = {}) {
     const row = sql.prepare("SELECT * FROM action_items WHERE id = ? AND user_id = ?").get(actionId, user.id);
     if (!row) throw new Error("action_not_found");
     const status = ["planned", "in_progress", "submitted", "completed", "changes_requested"].includes(input?.status) ? input.status : row.status;
+    const title = input?.title == null ? row.title : text(input.title, 120);
+    const detail = input?.detail == null ? row.detail : text(input.detail, 500);
+    if (!title || !detail) throw new Error("invalid_action");
+    const rawTrace = parseJson(row.trace_json, {});
+    const priority = ["high", "medium", "low"].includes(input?.priority) ? input.priority : rawTrace.taskPriority || "medium";
+    const trace = cleanTrace({ ...rawTrace, taskPriority: priority }, row.source, row.source_id);
     const reflection = input?.reflection == null ? row.reflection : text(input.reflection, 600);
     const timestamp = now().toISOString();
-    sql.prepare("UPDATE action_items SET status = ?, reflection = ?, updated_at = ? WHERE id = ? AND user_id = ?")
-      .run(status, reflection, timestamp, actionId, user.id);
-    audit(user.id, `action.${status}`, "action", actionId);
+    sql.prepare("UPDATE action_items SET title = ?, detail = ?, status = ?, reflection = ?, trace_json = ?, updated_at = ? WHERE id = ? AND user_id = ?")
+      .run(title, detail, status, reflection, JSON.stringify(trace), timestamp, actionId, user.id);
+    audit(user.id, `action.${status}`, "action", actionId, { priority });
     return mapAction(sql.prepare("SELECT * FROM action_items WHERE id = ?").get(actionId));
+  }
+
+  function deleteAction(user, actionId) {
+    if (!user) throw new Error("authentication_required");
+    const row = sql.prepare("SELECT * FROM action_items WHERE id = ? AND user_id = ?").get(actionId, user.id);
+    if (!row) throw new Error("action_not_found");
+    const evidence = sql.prepare("SELECT 1 FROM evidence_records WHERE action_item_id = ? LIMIT 1").get(actionId);
+    if (row.source === "opportunity" || evidence || ["submitted", "completed"].includes(row.status)) throw new Error("action_not_deletable");
+    sql.prepare("DELETE FROM action_items WHERE id = ? AND user_id = ?").run(actionId, user.id);
+    audit(user.id, "action.deleted", "action", actionId);
+    return true;
   }
 
   function submitEvidence(user, input) {
@@ -900,6 +921,7 @@ export function createPilotService(database, options = {}) {
     listActions,
     createAction,
     updateAction,
+    deleteAction,
     submitEvidence,
     listForStudent,
     saveParticipation,

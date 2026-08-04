@@ -30,5 +30,5 @@ export async function onboardRole(page: Page, roleName: "低年级学生" | "高
   await registerAndOpenOnboarding(page);
   await page.getByRole("radio", { name: roleName }).check();
   await page.getByRole("button", { name: "继续" }).click();
-  await page.getByRole("button", { name: "生成我的行动计划" }).click();
+  await page.getByRole("button", { name: "保存并更新计划" }).click();
 }

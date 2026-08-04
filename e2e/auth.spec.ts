@@ -75,7 +75,7 @@ test("student registers, completes onboarding, edits profile and returns after l
 
   await page.getByRole("radio", { name: "高年级学生" }).check();
   await page.getByRole("button", { name: "继续" }).click();
-  await page.getByRole("button", { name: "生成我的行动计划" }).click();
+  await page.getByRole("button", { name: "保存并更新计划" }).click();
   await expect(page).toHaveURL(/\/student\/home$/);
 
   await page.getByRole("link", { name: "个人资料" }).click();
@@ -95,4 +95,40 @@ test("student registers, completes onboarding, edits profile and returns after l
   await expect(page.getByLabel("学校")).toHaveValue("云南大学");
   await expect(page.getByLabel("学院")).toHaveValue("软件学院");
   await expect(page.getByLabel("个人简介")).toHaveValue("关注数据产品与人工智能");
+});
+
+test("failed cloud sync keeps this account's local plan after logout and login", async ({ page }) => {
+  const email = `offline-${Date.now()}@ynu.edu.cn`;
+  const password = "career-plan-2026";
+  await page.goto("/register");
+  await page.getByLabel("昵称").fill("离线同学");
+  await page.getByLabel("邮箱").fill(email);
+  await page.getByLabel("密码").fill(password);
+  await page.getByRole("button", { name: "创建账号" }).click();
+  await page.getByRole("radio", { name: "高年级学生" }).check();
+  await page.getByRole("button", { name: "继续" }).click();
+  await page.getByRole("button", { name: "保存并更新计划" }).click();
+  await expect(page).toHaveURL(/\/student\/home$/);
+
+  await page.route("**/api/me/career-state", async (route) => {
+    if (route.request().method() === "PUT") {
+      await route.fulfill({ status: 503, json: { message: "暂时无法同步" } });
+      return;
+    }
+    await route.continue();
+  });
+  await page.goto("/student/ai-planning");
+  await page.getByLabel("已有经历或优势证据").fill("断网也不能丢的规划上下文");
+
+  await expect.poll(async () => page.evaluate(() => Object.keys(localStorage)
+    .some((key) => key.startsWith("career-navigation-account-v1:"))), { timeout: 5_000 }).toBe(true);
+
+  await page.getByRole("link", { name: "个人资料" }).click();
+  await page.getByRole("button", { name: "退出登录" }).click();
+  await page.getByLabel("邮箱").fill(email);
+  await page.getByLabel("密码").fill(password);
+  await page.getByRole("button", { name: "登录" }).click();
+  await expect(page).toHaveURL(/\/student\/home$/);
+  await page.goto("/student/ai-planning");
+  await expect(page.getByLabel("已有经历或优势证据")).toHaveValue("断网也不能丢的规划上下文");
 });

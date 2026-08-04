@@ -56,7 +56,7 @@ export async function updateAccountProfile(profile: AccountProfile) {
 }
 
 export async function getRemoteCareerState() {
-  return request<{ state: CareerStateData | null }>("/me/career-state");
+  return request<{ state: CareerStateData | null; updatedAt: string | null }>("/me/career-state");
 }
 
 export async function saveRemoteCareerState(state: CareerStateData) {

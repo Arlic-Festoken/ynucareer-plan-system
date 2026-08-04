@@ -1,10 +1,9 @@
-import { ArrowRight, Bot, Check, CircleAlert, Clock3, LoaderCircle, Route, Sparkles, Target } from "lucide-react";
+import { ArrowRight, Bot, Check, CircleAlert, Clock3, LoaderCircle, Route, Sparkles, Target, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { getCoachStatus, type CoachStatus } from "../api/careerCoach";
 import { requestDirectionCandidates, requestPersonalizedPlan } from "../api/careerPlanner";
 import PageShell from "../components/common/PageShell";
-import TaskList from "../components/common/TaskList";
 import type { ActionTask, AiActionPlan, AiDirectionCandidate, GenerationTrace } from "../domain";
 import { preserveTaskProgress, recommendDirections } from "../services/recommendation";
 import { useCareerStore } from "../store/careerStore";
@@ -15,11 +14,12 @@ function toTasks(candidate: AiDirectionCandidate, tasks: AiActionPlan["tasks"], 
   return tasks.map((task, index) => ({
     id: `ai-plan-${candidate.id}-${index + 1}`,
     title: task.title,
-    detail: task.detail,
+    detail: `${task.detail}\n\n投入时间：${task.estimatedHours ?? 2} 小时\n完成标准：${task.evidence}`,
     category: task.category,
     priority: task.priority,
     semester: task.week,
     completed: false,
+    estimatedHours: task.estimatedHours ?? 2,
     evidence: [`计划产出：${task.evidence}`, `方向：${candidate.title}`],
     provenance: trace || undefined,
   }));
@@ -92,6 +92,16 @@ export default function AiPlanningPage() {
     }
   }
 
+  function updatePlanTask(index: number, patch: Partial<AiActionPlan["tasks"][number]>) {
+    if (!aiPlanning.actionPlan) return;
+    setAiPlanning({ actionPlan: { ...aiPlanning.actionPlan, tasks: aiPlanning.actionPlan.tasks.map((task, taskIndex) => taskIndex === index ? { ...task, ...patch } : task) } });
+  }
+
+  function removePlanTask(index: number) {
+    if (!aiPlanning.actionPlan || aiPlanning.actionPlan.tasks.length <= 1) return;
+    setAiPlanning({ actionPlan: { ...aiPlanning.actionPlan, tasks: aiPlanning.actionPlan.tasks.filter((_, taskIndex) => taskIndex !== index) } });
+  }
+
   function savePlan() {
     if (!selected || !aiPlanning.actionPlan) return;
     const nextTasks = toTasks(selected, aiPlanning.actionPlan.tasks, aiPlanning.generationTrace);
@@ -105,8 +115,6 @@ export default function AiPlanningPage() {
     }
     setSaved(true);
   }
-
-  const previewTasks = aiPlanning.actionPlan ? toTasks(selected as AiDirectionCandidate, aiPlanning.actionPlan.tasks, aiPlanning.generationTrace) : [];
 
   return <PageShell eyebrow="DeepSeek · 个性化规划" title="把宽泛兴趣，缩小成可以验证的方向。" description="AI 结合画像与现实约束提出候选；最终选择仍由你的真实行动决定。">
     <section className="ai-planner-intro">
@@ -127,7 +135,7 @@ export default function AiPlanningPage() {
     </section>
 
     {aiPlanning.directionResult && <section className="ai-direction-section">
-      <div className="ai-section-heading"><div><span className="section-kicker">02 · 方向候选</span><h2>比较问题场景，不只比较岗位名称。</h2><p>{aiPlanning.directionResult.overview}</p></div><Target size={28} /></div>
+      <div className="ai-section-heading"><div><span className="section-kicker">02 · 方向候选</span><h2>比较问题场景，不只比较岗位名称。</h2><p>{aiPlanning.directionResult.overview} 点击一张卡片，就把它设为你的 AI 主线；生成计划后仍可修改目标和任务。</p></div><Target size={28} /></div>
       <div className="ai-direction-grid">{aiPlanning.directionResult.candidates.map((candidate) => <button aria-pressed={selected?.id === candidate.id} className={selected?.id === candidate.id ? "ai-direction-card is-selected" : "ai-direction-card"} key={candidate.id} onClick={() => { setAiPlanning({ selectedCandidateId: candidate.id, actionPlan: null }); setSaved(false); }} type="button">
         <span className="ai-fit-label">{candidate.fit}</span><strong>{candidate.title}</strong><small>{candidate.specialization}</small><p>{candidate.rationale}</p>
         <dl><div><dt>可能处理</dt><dd>{candidate.problemExamples.join(" · ")}</dd></div><div><dt>需要验证</dt><dd>{candidate.evidenceNeeded.join(" · ")}</dd></div></dl>
@@ -144,9 +152,41 @@ export default function AiPlanningPage() {
     </section>}
 
     {aiPlanning.actionPlan && selected && <section className="ai-plan-result">
-      <div className="ai-section-heading"><div><span className="section-kicker">DeepSeek 规划结果</span><h2>{aiPlanning.actionPlan.objective}</h2><p>{aiPlanning.actionPlan.strategy}</p></div><span className="ai-plan-count">{aiPlanning.actionPlan.tasks.length}<small>项行动</small></span></div>
-      <TaskList readOnly tasks={previewTasks} />
-      <div className="ai-checkpoints"><div><span className="section-kicker">复盘节点</span>{aiPlanning.actionPlan.checkpoints.map((item) => <p key={`${item.week}-${item.question}`}><strong>{item.week}</strong>{item.question}</p>)}</div>{aiPlanning.actionPlan.risks.length > 0 && <div><span className="section-kicker">注意偏差</span>{aiPlanning.actionPlan.risks.map((risk) => <p key={risk}>{risk}</p>)}</div>}</div>
+      <div className="ai-section-heading"><div><span className="section-kicker">DeepSeek 规划结果</span><h2>先把主线目标改成你愿意执行的版本。</h2><label className="ai-objective-editor">主线目标<input aria-label="主线目标" maxLength={400} onChange={(event) => setAiPlanning({ actionPlan: { ...aiPlanning.actionPlan!, objective: event.target.value } })} value={aiPlanning.actionPlan.objective} /></label><p>{aiPlanning.actionPlan.strategy}</p></div><span className="ai-plan-count">{aiPlanning.actionPlan.tasks.length}<small>项行动</small></span></div>
+      <p className="ai-plan-edit-note">你可以删掉不适合当前节奏的任务，调整每项投入时间和重要程度；保存后会同步到行动中心。</p>
+      <div className="ai-plan-task-editor">
+        {aiPlanning.actionPlan.tasks.map((task, index) => <article key={`${task.title}-${index}`}>
+          <div className="ai-plan-task-editor-head"><span>{task.week} · 第 {index + 1} 项</span><button aria-label={`删除${task.title}`} disabled={aiPlanning.actionPlan!.tasks.length <= 1} onClick={() => removePlanTask(index)} type="button"><Trash2 size={15} />删除</button></div>
+          <div className="ai-plan-task-fields">
+            <label>行动名称<input maxLength={100} onChange={(event) => updatePlanTask(index, { title: event.target.value })} value={task.title} /></label>
+            <label>重要程度<select aria-label={`${task.title}重要程度`} onChange={(event) => updatePlanTask(index, { priority: event.target.value as ActionTask["priority"] })} value={task.priority}><option value="high">重要 · 优先完成</option><option value="medium">普通 · 按节奏推进</option><option value="low">低优先 · 有余力再做</option></select></label>
+            <label>预计投入（小时）<input aria-label={`${task.title}预计投入时间`} max="20" min="1" onChange={(event) => updatePlanTask(index, { estimatedHours: Number(event.target.value) })} type="number" value={task.estimatedHours ?? Math.max(1, Math.round(aiPlanning.timeBudgetHours / aiPlanning.actionPlan!.tasks.length))} /></label>
+          </div>
+          <label className="ai-plan-task-detail">怎么开始<textarea maxLength={320} onChange={(event) => updatePlanTask(index, { detail: event.target.value })} rows={3} value={task.detail} /></label>
+          <label className="ai-plan-task-detail">完成标准<textarea maxLength={220} onChange={(event) => updatePlanTask(index, { evidence: event.target.value })} rows={2} value={task.evidence} /></label>
+        </article>)}
+      </div>
+      <div className="ai-checkpoints">
+        <div>
+          <span className="section-kicker">复盘节点</span>
+          <div className="ai-checkpoint-list">
+            {aiPlanning.actionPlan.checkpoints.map((item) => (
+              <p className="ai-checkpoint-row" key={`${item.week}-${item.question}`}>
+                <strong>{item.week}</strong>
+                <span>{item.question}</span>
+              </p>
+            ))}
+          </div>
+        </div>
+        {aiPlanning.actionPlan.risks.length > 0 && (
+          <div>
+            <span className="section-kicker">注意偏差</span>
+            <ul className="ai-risk-list">
+              {aiPlanning.actionPlan.risks.map((risk) => <li key={risk}>{risk}</li>)}
+            </ul>
+          </div>
+        )}
+      </div>
       <div className="ai-save-plan"><button className="button button-primary" onClick={savePlan} type="button"><Check size={17} />保存到行动计划</button>{saved && <Link className="button button-secondary" to="/student/roadmap">已保存，查看行动计划 <ArrowRight size={16} /></Link>}</div>
     </section>}
   </PageShell>;

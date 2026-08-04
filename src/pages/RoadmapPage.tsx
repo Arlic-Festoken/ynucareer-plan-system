@@ -1,7 +1,7 @@
-import { ArrowRight, BadgeCheck, Circle, CheckCircle2, FileUp, LoaderCircle, Plus, Route, Save, X } from "lucide-react";
+import { ArrowRight, BadgeCheck, Circle, CheckCircle2, FileUp, LoaderCircle, Pencil, Plus, Route, Save, Star, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { createAction, getActions, submitActionEvidence, updateAction } from "../api/pilot";
+import { createAction, deleteAction, getActions, submitActionEvidence, updateAction } from "../api/pilot";
 import PageShell from "../components/common/PageShell";
 import EmptyState from "../components/product/EmptyState";
 import ProgressRail from "../components/product/ProgressRail";
@@ -23,10 +23,18 @@ export default function RoadmapPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [title, setTitle] = useState("");
+  const [detail, setDetail] = useState("");
+  const [addCategory, setAddCategory] = useState<ActionItem["category"]>("practice");
+  const [addPriority, setAddPriority] = useState<ActionItem["priority"]>("medium");
+  const [addDueDate, setAddDueDate] = useState("");
   const [evidenceAction, setEvidenceAction] = useState<ActionItem | null>(null);
   const [evidenceDescription, setEvidenceDescription] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [reflection, setReflection] = useState("");
+  const [editingAction, setEditingAction] = useState<ActionItem | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDetail, setEditDetail] = useState("");
+  const [editPriority, setEditPriority] = useState<ActionItem["priority"]>("medium");
   const explorer = profile.grade <= 2;
   const localTasks = explorer ? awakening.actionTasks : roadmapTasks;
 
@@ -40,6 +48,7 @@ export default function RoadmapPage() {
             title: task.title,
             detail: task.detail,
             category: task.category,
+            priority: task.priority,
             lane: localLane(explorer),
             source: task.id.startsWith("ai-plan-") ? "ai" : "rule",
             sourceId: task.id,
@@ -78,19 +87,63 @@ export default function RoadmapPage() {
     }
   }
 
+  async function toggleImportant(action: ActionItem) {
+    try {
+      const result = await updateAction(action.id, { priority: action.priority === "high" ? "medium" : "high" });
+      setActions((current) => current.map((item) => item.id === action.id ? result.action : item));
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "重要程度更新失败。");
+    }
+  }
+
+  function openEdit(action: ActionItem) {
+    setEditingAction(action);
+    setEditTitle(action.title);
+    setEditDetail(action.detail);
+    setEditPriority(action.priority);
+  }
+
+  async function saveEdit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editingAction) return;
+    try {
+      const result = await updateAction(editingAction.id, { title: editTitle, detail: editDetail, priority: editPriority });
+      setActions((current) => current.map((item) => item.id === editingAction.id ? result.action : item));
+      setEditingAction(null);
+      setMessage("行动计划已更新。");
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "行动计划更新失败。");
+    }
+  }
+
+  async function remove(action: ActionItem) {
+    if (!window.confirm(`确定删除“${action.title}”吗？删除后无法恢复。`)) return;
+    try {
+      await deleteAction(action.id);
+      setActions((current) => current.filter((item) => item.id !== action.id));
+      setMessage("行动已删除。");
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "行动删除失败。");
+    }
+  }
+
   async function add(event: React.FormEvent) {
     event.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || !detail.trim()) return;
     try {
       const { action } = await createAction({
         title: title.trim(),
-        detail: "完成后记录成果或发现。",
-        category: "practice",
+        detail: detail.trim(),
+        category: addCategory,
+        priority: addPriority,
+        dueDate: addDueDate,
         lane: localLane(explorer),
         source: "manual",
       });
       setActions((current) => [...current, action]);
       setTitle("");
+      setDetail("");
+      setAddDueDate("");
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "行动添加失败。");
     }
@@ -124,8 +177,9 @@ export default function RoadmapPage() {
       <div className="roadmap-group-heading"><span>{lane}</span><p>{items.filter((item) => item.status === "completed").length} / {items.length} 已完成</p></div>
       <div className="action-item-list">{items.map((action) => <article className={`action-item is-${action.status}`} key={action.id}>
         <button aria-label={action.status === "completed" ? `${action.title}已完成` : `推进${action.title}`} className="task-toggle" disabled={["submitted", "completed"].includes(action.status)} onClick={() => void patch(action, action.status === "planned" ? "in_progress" : "completed")} type="button">{action.status === "completed" ? <CheckCircle2 size={21} /> : <Circle size={21} />}</button>
-        <div><span>{categoryLabels[action.category]} · {statusLabels[action.status]}{action.trace.autonomous ? " · 可自主完成" : ""}</span><strong>{action.title}</strong><p>{action.detail}</p>{action.reflection && <small>{action.reflection}</small>}</div>
+        <div><span>{categoryLabels[action.category]} · {statusLabels[action.status]}{action.priority === "high" ? " · 重要" : ""}{action.trace.autonomous ? " · 可自主完成" : ""}</span><strong>{action.title}</strong><p>{action.detail}</p>{action.reflection && <small>{action.reflection}</small>}</div>
         <div className="action-item-buttons">
+          {! ["submitted", "completed"].includes(action.status) && <><button aria-label={action.priority === "high" ? `取消重要：${action.title}` : `标记重要：${action.title}`} onClick={() => void toggleImportant(action)} type="button"><Star size={14} />{action.priority === "high" ? "重要" : "标记重要"}</button><button onClick={() => openEdit(action)} type="button"><Pencil size={14} />编辑</button><button className="danger-action" onClick={() => void remove(action)} type="button"><Trash2 size={14} />删除</button></>}
           {action.source === "opportunity" && <Link to="/student/opportunities">查看资源 <ArrowRight size={14} /></Link>}
           {!["submitted", "completed"].includes(action.status) && <button onClick={() => { setEvidenceAction(action); setReflection(action.reflection); }} type="button"><FileUp size={14} />提交成果</button>}
           {action.status === "changes_requested" && <span>教师已退回，请补充后重新提交。</span>}
@@ -133,13 +187,20 @@ export default function RoadmapPage() {
         </div>
       </article>)}</div>
     </section>)}</section>}
-    <form className="quick-add" onSubmit={add}><div><span className="section-kicker">补充自己的行动</span><label>这周想推进的一件事<input onChange={(event) => setTitle(event.target.value)} placeholder="例如：完成一份数据作品说明" value={title} /></label></div><button className="button button-secondary" type="submit"><Plus size={17} />加入行动</button></form>
+    <form className="quick-add" onSubmit={add}><div><span className="section-kicker">补充自己的行动</span><div className="quick-add-fields"><label>行动名称<input onChange={(event) => setTitle(event.target.value)} placeholder="例如：完成一份数据作品说明" required value={title} /></label><label>怎么开始<textarea onChange={(event) => setDetail(event.target.value)} placeholder="写清第一步、投入时间和完成标准。" required rows={2} value={detail} /></label><label>分类<select onChange={(event) => setAddCategory(event.target.value as ActionItem["category"])} value={addCategory}>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>重要程度<select onChange={(event) => setAddPriority(event.target.value as ActionItem["priority"])} value={addPriority}><option value="high">重要</option><option value="medium">普通</option><option value="low">低优先</option></select></label><label>截止日期<input onChange={(event) => setAddDueDate(event.target.value)} type="date" value={addDueDate} /></label></div></div><button className="button button-secondary" type="submit"><Plus size={17} />加入行动</button></form>
     {evidenceAction && <div className="modal-backdrop" role="presentation"><form aria-label="提交行动成果" className="evidence-dialog" onSubmit={submitEvidence}>
       <div><div><span className="section-kicker">成果核验</span><h2>{evidenceAction.title}</h2></div><button aria-label="关闭" onClick={() => setEvidenceAction(null)} type="button"><X size={18} /></button></div>
       <label>成果说明<textarea maxLength={600} onChange={(event) => setEvidenceDescription(event.target.value)} placeholder="说明完成内容、承担部分和结果。" required rows={4} value={evidenceDescription} /></label>
       <label>公开成果链接（可选）<input onChange={(event) => setEvidenceUrl(event.target.value)} placeholder="https://..." type="url" value={evidenceUrl} /></label>
       <label>行动反思<textarea maxLength={600} onChange={(event) => setReflection(event.target.value)} placeholder="这一步验证或改变了什么？" required rows={4} value={reflection} /></label>
       <div><button className="button button-quiet" onClick={() => setEvidenceAction(null)} type="button">取消</button><button className="button button-primary" type="submit"><Save size={15} />提交核验</button></div>
+    </form></div>}
+    {editingAction && <div className="modal-backdrop" role="presentation"><form aria-label="编辑行动计划" className="evidence-dialog action-edit-dialog" onSubmit={saveEdit}>
+      <div><div><span className="section-kicker">调整行动</span><h2>把这一步改成你愿意开始的版本。</h2></div><button aria-label="关闭" onClick={() => setEditingAction(null)} type="button"><X size={18} /></button></div>
+      <label>行动名称<input maxLength={120} onChange={(event) => setEditTitle(event.target.value)} required value={editTitle} /></label>
+      <label>怎么开始 / 投入安排<textarea maxLength={500} onChange={(event) => setEditDetail(event.target.value)} required rows={5} value={editDetail} /></label>
+      <label>重要程度<select onChange={(event) => setEditPriority(event.target.value as ActionItem["priority"])} value={editPriority}><option value="high">重要 · 优先完成</option><option value="medium">普通 · 按节奏推进</option><option value="low">低优先 · 有余力再做</option></select></label>
+      <div><button className="button button-quiet" onClick={() => setEditingAction(null)} type="button">取消</button><button className="button button-primary" type="submit"><Save size={15} />保存修改</button></div>
     </form></div>}
     {message && <p className="save-message" role="status">{message}</p>}
   </PageShell>;

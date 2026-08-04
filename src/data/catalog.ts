@@ -27,15 +27,18 @@ export const blankAbilities: AbilityScores = {
   resilience: 50,
 };
 
-export const majors = ["计算机科学与技术", "通信工程", "数据科学与大数据技术", "教育技术学"];
+export const majors = ["计算机科学与技术", "通信工程", "智能科学与技术", "物联网工程", "电子信息工程"];
 export const interestOptions = ["人工智能", "数据与商业", "教育创新", "智慧医疗", "产品设计", "公共服务"];
 export const valueOptions = ["创造价值", "技术精进", "社会贡献", "稳定成长", "持续探索", "团队协作"];
 
 export const policyConnections = [
   { policy: "数字中国", industry: "数字经济", major: "计算机科学与技术", opportunity: "智能应用、软件工程与数据服务" },
+  { policy: "新型工业化", industry: "智能制造", major: "通信工程", opportunity: "工业互联网与边缘智能" },
+  { policy: "新型工业化", industry: "智能制造", major: "智能科学与技术", opportunity: "智能感知、机器学习与工业智能" },
+  { policy: "数字中国", industry: "物联网与智慧城市", major: "物联网工程", opportunity: "物联感知、边缘计算与城市服务" },
+  { policy: "新型工业化", industry: "电子信息产业", major: "电子信息工程", opportunity: "嵌入式系统、通信设备与智能终端" },
   { policy: "教育数字化战略", industry: "教育科技", major: "教育技术学", opportunity: "学习分析与智能教学产品" },
   { policy: "健康中国", industry: "智慧医疗", major: "数据科学与大数据技术", opportunity: "医疗数据治理与辅助决策" },
-  { policy: "新型工业化", industry: "智能制造", major: "通信工程", opportunity: "工业互联网与边缘智能" },
 ];
 
 export const directions: Direction[] = [

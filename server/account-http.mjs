@@ -57,7 +57,9 @@ export async function handleAccountRequest(request, accountService) {
     if (isAccountPath && !user) return response(401, { error: "authentication_required" });
     if (method === "GET" && path === "/me/profile") return response(200, { profile: accountService.getProfile(user.id) });
     if (method === "PATCH" && path === "/me/profile") return response(200, { profile: accountService.updateProfile(user.id, body) });
-    if (method === "GET" && path === "/me/career-state") return response(200, { state: accountService.getCareerState(user.id) });
+    if (method === "GET" && path === "/me/career-state") {
+      return response(200, accountService.getCareerStateRecord(user.id) ?? { state: null, updatedAt: null });
+    }
     if (method === "PUT" && path === "/me/career-state") return response(200, accountService.saveCareerState(user.id, body?.state));
     return { handled: false };
   } catch (error) {
