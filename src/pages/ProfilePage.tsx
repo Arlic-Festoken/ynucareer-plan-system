@@ -58,7 +58,7 @@ export default function ProfilePage() {
     <section className="profile-summary">
       <div className="profile-avatar"><UserRound size={28} /></div>
       <div><span className="section-kicker">当前账号</span><h2>{user?.displayName}</h2><p><Mail size={15} />{user?.email}</p></div>
-      <div className={`profile-sync is-${syncStatus}`}><Cloud size={17} /><span>{syncStatus === "saving" ? "正在保存" : syncStatus === "error" ? "保存失败" : "已保存"}</span><small>{lastSyncedAt ? new Date(lastSyncedAt).toLocaleString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "等待保存"}</small></div>
+      <button className={`profile-sync is-${syncStatus}`} disabled={syncStatus !== "error"} onClick={() => { void syncCareerNow(); }} type="button"><Cloud size={17} /><span>{syncStatus === "saving" ? "正在自动保存" : syncStatus === "loading" ? "正在恢复计划" : syncStatus === "error" ? "已保存在本机" : "已保存到账号"}</span><small>{syncStatus === "error" ? "点击重试云端同步" : lastSyncedAt ? new Date(lastSyncedAt).toLocaleString("zh-CN", { hour: "2-digit", minute: "2-digit" }) : "账号记忆已开启"}</small></button>
     </section>
 
     <div className="profile-layout">

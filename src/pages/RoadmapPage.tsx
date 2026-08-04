@@ -1,4 +1,4 @@
-import { ArrowRight, BadgeCheck, Circle, CheckCircle2, FileUp, LoaderCircle, Pencil, Plus, Route, Save, Star, Trash2, X } from "lucide-react";
+import { ArrowRight, BadgeCheck, CalendarDays, ChevronDown, Circle, CheckCircle2, FileUp, LoaderCircle, Pencil, Plus, Route, Save, Star, TimerReset, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { createAction, deleteAction, getActions, submitActionEvidence, updateAction } from "../api/pilot";
@@ -6,6 +6,7 @@ import PageShell from "../components/common/PageShell";
 import EmptyState from "../components/product/EmptyState";
 import ProgressRail from "../components/product/ProgressRail";
 import type { ActionItem } from "../domain";
+import { presentAction } from "../services/actionPlan";
 import { useCareerStore } from "../store/careerStore";
 
 const categoryLabels = { course: "课程", project: "项目", practice: "实践", reflection: "反思", research: "科研", career: "生涯" };
@@ -13,6 +14,25 @@ const statusLabels = { planned: "待开始", in_progress: "进行中", submitted
 
 function localLane(explorer: boolean) {
   return explorer ? "exploration" as const : "growth" as const;
+}
+
+function ActionBlueprint({ action }: { action: ActionItem }) {
+  const copy = presentAction(action);
+  return <details className="action-blueprint">
+    <summary>查看执行蓝图 <ChevronDown size={15} /></summary>
+    <div className="action-blueprint-grid">
+      <aside>
+        <span><TimerReset size={15} />建议投入</span>
+        <strong>{copy.timebox}</strong>
+        <small>{copy.sourceLabel}{action.trace.autonomous ? " · 可自主完成" : ""}</small>
+      </aside>
+      <div>
+        <span className="section-kicker">建议执行</span>
+        <ol className="action-blueprint-steps">{copy.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+        <div className="action-completion-standard"><BadgeCheck size={17} /><div><span>完成标准</span><strong>{copy.completionStandard}</strong></div></div>
+      </div>
+    </div>
+  </details>;
 }
 
 export default function RoadmapPage() {
@@ -177,7 +197,7 @@ export default function RoadmapPage() {
       <div className="roadmap-group-heading"><span>{lane}</span><p>{items.filter((item) => item.status === "completed").length} / {items.length} 已完成</p></div>
       <div className="action-item-list">{items.map((action) => <article className={`action-item is-${action.status}`} key={action.id}>
         <button aria-label={action.status === "completed" ? `${action.title}已完成` : `推进${action.title}`} className="task-toggle" disabled={["submitted", "completed"].includes(action.status)} onClick={() => void patch(action, action.status === "planned" ? "in_progress" : "completed")} type="button">{action.status === "completed" ? <CheckCircle2 size={21} /> : <Circle size={21} />}</button>
-        <div><span>{categoryLabels[action.category]} · {statusLabels[action.status]}{action.priority === "high" ? " · 重要" : ""}{action.trace.autonomous ? " · 可自主完成" : ""}</span><strong>{action.title}</strong><p>{action.detail}</p>{action.reflection && <small>{action.reflection}</small>}</div>
+        <div className="action-item-copy"><div className="action-item-meta"><span>{String(items.indexOf(action) + 1).padStart(2, "0")}</span><span>{categoryLabels[action.category]}</span><span>{statusLabels[action.status]}</span><span className={presentAction(action).isOverdue ? "is-overdue" : ""}><CalendarDays size={12} />{presentAction(action).scheduleLabel}</span></div><strong className="action-item-title">{action.title}</strong><p>{presentAction(action).description}</p>{action.reflection && <blockquote>{action.reflection}</blockquote>}<ActionBlueprint action={action} /></div>
         <div className="action-item-buttons">
           {! ["submitted", "completed"].includes(action.status) && <><button aria-label={action.priority === "high" ? `取消重要：${action.title}` : `标记重要：${action.title}`} onClick={() => void toggleImportant(action)} type="button"><Star size={14} />{action.priority === "high" ? "重要" : "标记重要"}</button><button onClick={() => openEdit(action)} type="button"><Pencil size={14} />编辑</button><button className="danger-action" onClick={() => void remove(action)} type="button"><Trash2 size={14} />删除</button></>}
           {action.source === "opportunity" && <Link to="/student/opportunities">查看资源 <ArrowRight size={14} /></Link>}

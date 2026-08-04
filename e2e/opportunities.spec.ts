@@ -55,10 +55,7 @@ test("student and staff complete the reviewed resource and evidence feedback loo
   await expect(composer.getByLabel("责任担当")).toBeChecked();
   await composer.getByRole("button", { name: /继续/ }).click();
   await expect(composer.getByText(title, { exact: true })).toBeVisible();
-  const submitResource = composer.locator("button[type='submit']");
-  await expect(submitResource).toBeVisible();
-  await expect(submitResource).toBeEnabled();
-  await submitResource.click();
+  await composer.getByRole("button", { name: "保存草稿并提交审核" }).click();
   await expect(teacherPage.getByRole("status")).toContainText("资源已提交审核");
 
   const resourceCard = teacherPage.locator(".staff-resource-grid article").filter({ hasText: title });

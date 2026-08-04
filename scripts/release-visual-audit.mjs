@@ -65,6 +65,12 @@ page.on("console", (message) => {
 async function capture(name, path, options = {}) {
   await page.goto(`${baseURL}${path}`, { waitUntil: "networkidle" });
   if (options.zoom) await page.evaluate((zoom) => { document.body.style.zoom = String(zoom); }, options.zoom);
+  if (options.openFirstBlueprint) await page.locator(".action-blueprint").first().evaluate((details) => { details.open = true; });
+  if (options.openMobileMenu) await page.getByRole("button", { name: "更多" }).click();
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    window.scrollTo(0, 0);
+  });
   const metrics = await page.evaluate(() => ({
     path: location.pathname,
     width: window.innerWidth,
@@ -119,21 +125,26 @@ await page.getByRole("button", { name: "方向设计" }).click();
 await page.locator(".direction-option").first().click();
 await page.getByRole("button", { name: "行动创造" }).click();
 await page.getByRole("button", { name: "生成探索行动计划" }).click();
-await capture("05-explorer-roadmap-desktop", "/student/roadmap");
+await capture("05-explorer-roadmap-desktop", "/student/roadmap", { openFirstBlueprint: true });
 await page.setViewportSize({ width: 390, height: 844 });
 await capture("06-awakening-mobile", "/student/awakening");
-await capture("07-explorer-roadmap-mobile", "/student/roadmap");
+await capture("07-explorer-roadmap-mobile", "/student/roadmap", { openFirstBlueprint: true });
 await page.evaluate(() => localStorage.setItem("career-theme", "dark"));
 await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
-await capture("07a-awakening-mobile-dark", "/student/awakening");
+await capture("07a-explorer-roadmap-dark-reduced-motion", "/student/roadmap", { openFirstBlueprint: true });
+await page.evaluate(() => localStorage.setItem("career-theme", "light"));
+await page.emulateMedia({ colorScheme: "light", reducedMotion: "no-preference" });
 await page.setViewportSize({ width: 1440, height: 1000 });
-await capture("07b-awakening-desktop-dark", "/student/awakening");
+await capture("07b-explorer-roadmap-200-percent-zoom", "/student/roadmap", { zoom: 2, openFirstBlueprint: true });
+await page.evaluate(() => { document.body.style.zoom = "1"; });
 
 await resetAndOnboard("高年级学生");
 await capture("08-student-home-desktop", "/student/home");
-await capture("08b-learning-path-desktop", "/student/learning-path");
 await capture("08a-profile-desktop", "/account/profile");
 await capture("08a-ai-planning-desktop", "/student/ai-planning");
+await page.goto(`${baseURL}/student/learning-path`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "载入示例并立即生成" }).click();
+await capture("08b-learning-path-desktop", "/student/learning-path");
 await capture("09-matching-desktop", "/student/matching");
 await capture("10-resource-board-desktop", "/student/opportunities");
 await capture("10a-ability-profile-desktop", "/student/abilities");
@@ -148,28 +159,21 @@ await capture("12-graduate-mobile", "/graduate/navigation");
 
 await resetAndOnboard("高年级学生");
 await capture("13-student-home-mobile", "/student/home");
-await capture("13b-learning-path-mobile", "/student/learning-path");
 await capture("13a-profile-mobile", "/account/profile");
 await capture("14-matching-mobile", "/student/matching");
 await capture("14a-ai-planning-mobile", "/student/ai-planning");
+await page.goto(`${baseURL}/student/learning-path`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "载入示例并立即生成" }).click();
+await capture("14b-learning-path-mobile", "/student/learning-path");
+await capture("14c-mobile-all-features", "/student/learning-path", { openMobileMenu: true });
 await capture("15-resource-board-mobile", "/student/opportunities");
 await capture("15a-ability-profile-mobile", "/student/abilities");
-
-await page.evaluate(() => localStorage.setItem("career-theme", "dark"));
-await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
-await capture("15b-student-home-mobile-dark", "/student/home");
-await capture("15c-ai-planning-mobile-dark", "/student/ai-planning");
-await page.setViewportSize({ width: 1440, height: 1000 });
-await capture("15d-student-home-desktop-dark", "/student/home");
-await capture("15e-matching-desktop-dark", "/student/matching");
-await capture("15f-ai-planning-desktop-dark", "/student/ai-planning");
-await capture("15g-ability-profile-desktop-dark", "/student/abilities");
-await capture("15h-roadmap-desktop-dark", "/student/roadmap");
-await capture("15i-resource-board-desktop-dark", "/student/opportunities");
 
 await registerAuditAccount("visual-teacher@ynu.edu.cn");
 await page.setViewportSize({ width: 1440, height: 1000 });
 await capture("16-staff-workspace-desktop", "/teacher/dashboard");
+await page.evaluate(() => localStorage.setItem("career-theme", "dark"));
+await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
 await capture("17-staff-workspace-dark-reduced-motion", "/teacher/dashboard");
 await page.setViewportSize({ width: 390, height: 844 });
 await capture("18-staff-workspace-mobile-dark", "/teacher/dashboard");

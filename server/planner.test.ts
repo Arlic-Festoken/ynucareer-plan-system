@@ -79,6 +79,8 @@ describe("DeepSeek planning boundary", () => {
       horizonWeeks: 8,
     }, "deepseek-v4-pro");
     expect(request.max_tokens).toBe(2200);
+    expect(request.messages[0].content).toContain("准备、执行、整理");
+    expect(request.messages[0].content).toContain("可核验");
 
     const tasks = Array.from({ length: 5 }, (_, index) => ({
       title: `任务 ${index + 1}`,

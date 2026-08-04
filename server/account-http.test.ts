@@ -66,7 +66,13 @@ describe("account HTTP contract", () => {
     }, service);
     expect(saved.status).toBe(200);
     const loaded = await handleAccountRequest({ method: "GET", path: "/me/career-state", headers: { cookie }, secure: true }, service);
-    expect(loaded).toMatchObject({ status: 200, body: { state: { hasOnboarded: true, selectedJobId: "data-analyst" } } });
+    expect(loaded).toMatchObject({
+      status: 200,
+      body: {
+        state: { hasOnboarded: true, selectedJobId: "data-analyst" },
+        updatedAt: "2026-07-24T08:00:00.000Z",
+      },
+    });
     database.close();
   });
 

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { blankAbilities } from "../data/catalog";
-import type { AbilityScores, ActionTask, CareerProfile, CareerStateData, ResearchOutcome, UserRole } from "../domain";
+import type { AbilityScores, ActionTask, CareerProfile, CareerStateData, CurriculumPlan, LearningPathInputs, LearningPathPlan, ResearchOutcome, UserRole } from "../domain";
 import { readStorageItem, removeStorageItem, writeStorageItem } from "./accountMemory";
 
 const defaultProfile: CareerProfile = {
@@ -34,6 +34,20 @@ const defaultData: CareerStateData = {
     generatedAt: null,
     generationTrace: null,
   },
+  learningPath: {
+    inputs: {
+      targetRole: "算法工程师",
+      gpa: 3.5,
+      gpaScale: 4,
+      rankPercentile: null,
+      routePreference: "dual",
+      weeklyHours: 10,
+      researchExperience: "none",
+      englishLevel: "starting",
+    },
+    curriculum: null,
+    plan: null,
+  },
 };
 
 type CareerStore = CareerStateData & {
@@ -46,6 +60,9 @@ type CareerStore = CareerStateData & {
   addRoadmapTask: (task: ActionTask) => void;
   setResearch: (patch: Partial<CareerStateData["research"]>) => void;
   setAiPlanning: (patch: Partial<CareerStateData["aiPlanning"]>) => void;
+  setLearningPathInputs: (patch: Partial<LearningPathInputs>) => void;
+  setCurriculumPlan: (curriculum: CurriculumPlan | null) => void;
+  setLearningPathPlan: (plan: LearningPathPlan | null) => void;
   addResearchOutcome: (outcome: ResearchOutcome) => void;
   removeResearchOutcome: (id: string) => void;
   updateResearchTask: (lane: "researchTasks" | "careerTasks", id: string, patch: Partial<ActionTask>) => void;
@@ -96,6 +113,7 @@ export function migrateCareerState(persistedState: unknown): CareerStateData {
   const persistedAwakening: Partial<CareerStateData["awakening"]> = persisted.awakening ?? {};
   const persistedResearch: Partial<CareerStateData["research"]> = persisted.research ?? {};
   const persistedAiPlanning: Partial<CareerStateData["aiPlanning"]> = persisted.aiPlanning ?? {};
+  const persistedLearningPath: Partial<CareerStateData["learningPath"]> = persisted.learningPath ?? {};
   return {
     ...defaultData,
     ...persisted,
@@ -132,6 +150,20 @@ export function migrateCareerState(persistedState: unknown): CareerStateData {
         ? persistedAiPlanning.actionPlan
         : null,
     },
+    learningPath: {
+      ...defaultData.learningPath,
+      ...persistedLearningPath,
+      inputs: {
+        ...defaultData.learningPath.inputs,
+        ...(persistedLearningPath.inputs ?? {}),
+      },
+      curriculum: persistedLearningPath.curriculum && Array.isArray(persistedLearningPath.curriculum.courses)
+        ? persistedLearningPath.curriculum
+        : null,
+      plan: persistedLearningPath.plan && Array.isArray(persistedLearningPath.plan.nodes) && Array.isArray(persistedLearningPath.plan.edges)
+        ? persistedLearningPath.plan
+        : null,
+    },
   };
 }
 
@@ -144,6 +176,7 @@ export function careerStateSnapshot(state: CareerStateData): CareerStateData {
     roadmapTasks: state.roadmapTasks,
     research: state.research,
     aiPlanning: state.aiPlanning,
+    learningPath: state.learningPath,
   };
 }
 
@@ -160,6 +193,9 @@ export const useCareerStore = create<CareerStore>()(
       addRoadmapTask: (task) => set((state) => ({ roadmapTasks: [...state.roadmapTasks, task] })),
       setResearch: (patch) => set((state) => ({ research: { ...state.research, ...patch } })),
       setAiPlanning: (patch) => set((state) => ({ aiPlanning: { ...state.aiPlanning, ...patch } })),
+      setLearningPathInputs: (patch) => set((state) => ({ learningPath: { ...state.learningPath, inputs: { ...state.learningPath.inputs, ...patch }, plan: null } })),
+      setCurriculumPlan: (curriculum) => set((state) => ({ learningPath: { ...state.learningPath, curriculum, plan: null } })),
+      setLearningPathPlan: (plan) => set((state) => ({ learningPath: { ...state.learningPath, plan } })),
       addResearchOutcome: (outcome) => set((state) => ({ research: { ...state.research, outcomes: [...state.research.outcomes, outcome] } })),
       removeResearchOutcome: (id) => set((state) => ({ research: { ...state.research, outcomes: state.research.outcomes.filter((outcome) => outcome.id !== id) } })),
       updateResearchTask: (lane, id, patch) => set((state) => ({ research: { ...state.research, [lane]: updateTask(state.research[lane], id, patch) } })),

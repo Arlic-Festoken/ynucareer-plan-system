@@ -30,6 +30,7 @@ describe("career store", () => {
     expect(migrated.awakening.motivation.curiosity).toBe(3);
     expect(migrated.research.careerTasks).toEqual([]);
     expect(migrated.aiPlanning).toMatchObject({ timeBudgetHours: 6, horizonWeeks: 8, directionResult: null });
+    expect(migrated.learningPath).toMatchObject({ curriculum: null, plan: null, inputs: { targetRole: "算法工程师", weeklyHours: 10 } });
   });
 
   it("persists AI planning choices and clears them with demo reset", () => {
@@ -68,5 +69,19 @@ describe("career store", () => {
       continuousLearning: 40,
       resilience: 50,
     });
+  });
+
+  it("persists imported curriculum and generated learning-path state in account snapshots", () => {
+    useCareerStore.getState().resetDemo();
+    useCareerStore.getState().setCurriculumPlan({
+      title: "计算机科学与技术培养方案",
+      major: "计算机科学与技术",
+      entryYear: 2025,
+      sourceName: "培养方案.csv",
+      importedAt: "2026-07-29T00:00:00.000Z",
+      courses: [{ id: "math", name: "高等数学", semester: "第 1 学期", credits: 5, category: "基础", status: "completed", score: 88 }],
+    });
+    const snapshot = careerStateSnapshot(useCareerStore.getState());
+    expect(snapshot.learningPath.curriculum?.courses[0]).toMatchObject({ name: "高等数学", score: 88 });
   });
 });

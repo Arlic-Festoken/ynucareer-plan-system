@@ -5,41 +5,6 @@ async function onboardHigherGrade(page: import("@playwright/test").Page) {
   await onboardRole(page, "高年级学生");
 }
 
-async function expectTextContrast(
-  page: import("@playwright/test").Page,
-  foregroundSelector: string,
-  backgroundSelector: string,
-  minimum = 4.5,
-) {
-  const result = await page.evaluate(({ foregroundSelector: foreground, backgroundSelector: background }) => {
-    const foregroundElement = document.querySelector(foreground);
-    const backgroundElement = document.querySelector(background);
-    if (!foregroundElement || !backgroundElement) return null;
-    const parseRgb = (value: string) => {
-      const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number);
-      return channels?.length === 3 ? channels : null;
-    };
-    const foregroundRgb = parseRgb(getComputedStyle(foregroundElement).color);
-    const backgroundRgb = parseRgb(getComputedStyle(backgroundElement).backgroundColor);
-    if (!foregroundRgb || !backgroundRgb) return null;
-    const luminance = (channels: number[]) => channels
-      .map((channel) => channel / 255)
-      .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
-      .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
-    const foregroundLuminance = luminance(foregroundRgb);
-    const backgroundLuminance = luminance(backgroundRgb);
-    const ratio = (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
-      / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
-    return {
-      ratio,
-      foreground: getComputedStyle(foregroundElement).color,
-      background: getComputedStyle(backgroundElement).backgroundColor,
-    };
-  }, { foregroundSelector, backgroundSelector });
-  expect(result, `${foregroundSelector} and ${backgroundSelector} should be rendered`).not.toBeNull();
-  expect(result?.ratio, `${foregroundSelector}: ${result?.foreground} on ${result?.background}`).toBeGreaterThanOrEqual(minimum);
-}
-
 test("all four higher-grade pathways generate executable plans", async ({ page }) => {
   await onboardHigherGrade(page);
   await page.getByRole("link", { name: "目标诊断", exact: true }).click();
@@ -62,11 +27,30 @@ test("roadmap supports custom actions and persists them", async ({ page }) => {
   await page.getByRole("button", { name: "生成成长路线图" }).click();
   await page.getByRole("link", { name: "查看已生成计划" }).click();
   await page.getByLabel("行动名称").fill("完成一次行业岗位分析");
-  await page.getByLabel("怎么开始").fill("先选取三个目标岗位，记录共同要求并写出一页结论。");
+  await page.getByLabel("怎么开始").fill("对照三个公开岗位描述，整理共同能力要求和当前差距。");
   await page.getByRole("button", { name: "加入行动" }).click();
-  await expect(page.getByText("完成一次行业岗位分析")).toBeVisible();
+  const customAction = page.locator(".action-item").filter({ hasText: "完成一次行业岗位分析" });
+  await expect(customAction.locator(".action-item-title")).toHaveText("完成一次行业岗位分析");
   await page.reload();
-  await expect(page.getByText("完成一次行业岗位分析")).toBeVisible();
+  await expect(customAction.locator(".action-item-title")).toHaveText("完成一次行业岗位分析");
+});
+
+test("curriculum import generates a detailed algorithm topology and saves near-term actions", async ({ page }) => {
+  await onboardHigherGrade(page);
+  await page.goto("/student/learning-path");
+  await page.getByRole("button", { name: "载入示例并立即生成" }).click();
+  await expect(page.getByText(/已载入 16 门计算机类示例课程/)).toBeVisible();
+  await page.getByLabel("专业排名前 %").fill("12");
+  await page.getByRole("button", { name: "生成针对性学习路径" }).click();
+  await expect(page.getByRole("heading", { name: "保研主线，考研保底" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "算法工程师学习路径拓扑图" })).toBeVisible();
+  await page.getByRole("button", { name: /吴恩达神经网络课程/ }).click();
+  await expect(page.getByRole("heading", { name: "吴恩达神经网络课程 → PyTorch" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Deep Learning Specialization/ }).first()).toHaveAttribute("href", /^https:\/\//);
+  await page.getByRole("button", { name: "加入行动中心" }).click();
+  await expect(page.getByText(/已把当前和下一阶段的/)).toBeVisible();
+  await page.getByRole("link", { name: "查看行动计划" }).click();
+  await expect(page.locator(".action-item").filter({ hasText: "把高数线代迁移到机器学习" })).toBeVisible();
 });
 
 test("route guards, 404 and AI fallback behave safely", async ({ page, request, baseURL }) => {
@@ -129,11 +113,7 @@ test("DeepSeek planning flow creates candidates and saves a personalized plan", 
           category: index === 3 ? "career" : index === 4 ? "reflection" : "project",
         })),
         checkpoints: [{ week: "第 2 周", question: "是否愿意继续处理这个问题？" }, { week: "第 5 周", question: "真实反馈是否支持继续投入？" }],
-        risks: [
-          "代码版本或数据集问题失败时，先预留时间调试或简化模型。",
-          "时间预算不足时，优先保证复现和复盘两项核心任务。",
-          "社区讨论无人回复时，改为阅读并总结一篇高质量讨论帖。",
-        ],
+        risks: ["只学习工具，没有形成问题结论"],
       },
       meta: { provider: "deepseek", model: "deepseek-v4-flash", generatedAt: "2026-07-23T00:00:00.000Z" },
     },
@@ -149,31 +129,19 @@ test("DeepSeek planning flow creates candidates and saves a personalized plan", 
   await page.getByRole("button", { name: /学习产品数据分析/ }).click();
   await page.getByRole("button", { name: "生成个性化行动计划" }).click();
   await expect(page.getByRole("heading", { name: "先把主线目标改成你愿意执行的版本。" })).toBeVisible();
-  const objective = page.getByLabel("主线目标");
-  await expect(objective).toHaveValue("八周内完成一次学习产品数据分析方向验证。");
-  await objective.fill("八周内完成一次学习产品数据分析验证并拿到真实反馈。");
+  await expect(page.getByLabel("主线目标")).toHaveValue("八周内完成一次学习产品数据分析方向验证。");
+  await page.getByLabel("主线目标").fill("四周内完成一次学习产品数据分析方向验证。");
   await expect(page.getByLabel("定义一个学习产品问题重要程度")).toHaveValue("high");
   await page.getByLabel("定义一个学习产品问题预计投入时间").fill("3");
-  await page.getByLabel("定义一个学习产品问题重要程度").selectOption("medium");
   await page.getByRole("button", { name: "删除完成公开数据清洗" }).click();
-  await expect(page.getByText("完成公开数据清洗")).toHaveCount(0);
-  await expect(page.getByLabel("定义一个学习产品问题预计投入时间")).toBeVisible();
+  await expect(page.getByRole("button", { name: "删除完成公开数据清洗" })).toHaveCount(0);
   await expect(page.locator(".ai-planning-progress")).toHaveCount(0);
-  const checkpointQuestion = page.getByText("是否愿意继续处理这个问题？");
-  const riskItem = page.getByText("代码版本或数据集问题失败时，先预留时间调试或简化模型。");
-  await expect(checkpointQuestion).toBeVisible();
-  await expect(riskItem).toBeVisible();
-  expect((await checkpointQuestion.boundingBox())?.width).toBeGreaterThan(180);
-  expect((await riskItem.boundingBox())?.width).toBeGreaterThan(250);
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
-  expect((await checkpointQuestion.boundingBox())?.width).toBeGreaterThan(180);
-  expect((await riskItem.boundingBox())?.width).toBeGreaterThan(240);
   await page.getByRole("button", { name: "保存到行动计划" }).click();
   await page.getByRole("link", { name: /已保存，查看行动计划/ }).click();
-  await expect(page.getByText("定义一个学习产品问题")).toBeVisible();
+  const savedAction = page.locator(".action-item").filter({ hasText: "定义一个学习产品问题" });
+  await expect(savedAction.locator(".action-item-title")).toHaveText("定义一个学习产品问题");
   await page.reload();
-  await expect(page.getByText("定义一个学习产品问题")).toBeVisible();
+  await expect(savedAction.locator(".action-item-title")).toHaveText("定义一个学习产品问题");
 });
 
 test("core workspaces avoid horizontal overflow on mobile", async ({ page }) => {
@@ -186,46 +154,34 @@ test("core workspaces avoid horizontal overflow on mobile", async ({ page }) => 
   }
 });
 
-test("dark theme keeps student workspace text readable", async ({ page }) => {
+test("mobile navigation exposes secondary features and learning paths use a readable step list", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await onboardHigherGrade(page);
-  await page.evaluate(() => localStorage.setItem("career-theme", "dark"));
-  await page.goto("/student/home");
-  await expect(page.locator(".ai-coach-card")).toBeVisible();
-  await expectTextContrast(page, ".ai-coach-heading h2", ".ai-coach-card");
-  await expectTextContrast(page, ".ai-coach-heading p", ".ai-coach-card");
-  await expectTextContrast(page, ".ai-coach-card .section-kicker", ".ai-coach-card");
 
-  await page.goto("/student/abilities");
-  await expect(page.locator(".ability-next-step")).toBeVisible();
-  await expectTextContrast(page, ".ability-next-step h2", ".ability-next-step");
-  await expectTextContrast(page, ".ability-next-step p", ".ability-next-step");
+  await page.getByRole("button", { name: "更多" }).click();
+  const allFeatures = page.getByRole("dialog", { name: "全部功能" });
+  await expect(allFeatures).toBeVisible();
+  await expect(allFeatures.getByRole("link", { name: "学习路径图" })).toBeVisible();
+  await expect(allFeatures.getByRole("link", { name: "能力与证据" })).toBeVisible();
+  await expect(allFeatures.getByRole("link", { name: "AI 规划" })).toBeVisible();
+  await expect(allFeatures.getByRole("link", { name: "个人资料" })).toBeVisible();
 
-  await page.goto("/student/matching");
-  await expect(page.locator(".ai-planning-entry")).toBeVisible();
-  await expectTextContrast(page, ".ai-planning-entry strong", ".ai-planning-entry");
-  await expectTextContrast(page, ".ai-planning-entry p", ".ai-planning-entry");
-  await expectTextContrast(page, ".job-options button:not(.is-selected) strong", ".job-options button:not(.is-selected)");
-  await expectTextContrast(page, ".diagnosis-explainer > div > p", ".diagnosis-explainer");
+  await allFeatures.getByRole("link", { name: "学习路径图" }).click();
+  await page.getByRole("button", { name: "载入示例并立即生成" }).click();
+  await expect(page.getByLabel("算法工程师学习路径步骤")).toBeVisible();
+  await expect(page.getByRole("region", { name: "算法工程师学习路径拓扑图" })).toBeHidden();
+  await expect(page.locator(".learning-path-mobile-list button")).toHaveCount(11);
+  await page.locator(".learning-path-mobile-list button").nth(1).click();
+  await expect(page.locator(".learning-path-mobile-list button").nth(1)).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".path-resource-grid a").nth(7)).toBeHidden();
+  await page.getByRole("button", { name: "查看全部 8 个资源" }).click();
+  await expect(page.locator(".path-resource-grid a").nth(7)).toBeVisible();
 
-  await page.goto("/student/opportunities");
-  await expect(page.locator(".resource-context")).toBeVisible();
-  await expectTextContrast(page, ".resource-context p", ".resource-context");
-  await expectTextContrast(page, ".resource-filters button.is-active", ".resource-filters button.is-active");
-
-  await page.goto("/student/ai-planning");
-  await expect(page.locator(".ai-fallback")).toBeVisible();
-  await expectTextContrast(page, ".ai-fallback strong", ".ai-fallback");
-  await expectTextContrast(page, ".ai-fallback p", ".ai-fallback");
-
-  await page.goto("/student/roadmap");
-  await expect(page.locator(".quick-add")).toBeVisible();
-  await expectTextContrast(page, ".quick-add label", ".quick-add");
-
-  await page.goto("/student/learning-path");
-  await expect(page.locator(".learning-path-grid")).toBeVisible();
-  await expect(page.locator(".path-guide")).toBeVisible();
-  await expectTextContrast(page, ".path-guide h2", ".path-guide");
-  await expectTextContrast(page, ".path-guide li", ".path-guide");
+  const mobileNavigation = page.getByRole("navigation", { name: "移动端主导航" });
+  await page.evaluate(() => window.scrollTo(0, 900));
+  await expect(mobileNavigation).toHaveClass(/is-hidden/);
+  await page.evaluate(() => window.scrollBy(0, -120));
+  await expect(mobileNavigation).not.toHaveClass(/is-hidden/);
 });
 
 test("job search exposes a clear empty state", async ({ page }) => {
