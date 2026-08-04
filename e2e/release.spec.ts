@@ -28,11 +28,42 @@ test("roadmap supports custom actions and persists them", async ({ page }) => {
   await page.getByRole("link", { name: "查看已生成计划" }).click();
   await page.getByLabel("行动名称").fill("完成一次行业岗位分析");
   await page.getByLabel("怎么开始").fill("对照三个公开岗位描述，整理共同能力要求和当前差距。");
+  await page.getByLabel("新增行动完成标准").fill("提交一页岗位能力对照表。");
   await page.getByRole("button", { name: "加入行动" }).click();
   const customAction = page.locator(".action-item").filter({ hasText: "完成一次行业岗位分析" });
   await expect(customAction.locator(".action-item-title")).toHaveText("完成一次行业岗位分析");
   await page.reload();
   await expect(customAction.locator(".action-item-title")).toHaveText("完成一次行业岗位分析");
+});
+
+test("roadmap edits keep the completion contract and priority after reload", async ({ page }) => {
+  await onboardHigherGrade(page);
+  await page.getByRole("link", { name: "目标诊断", exact: true }).click();
+  await page.getByRole("button", { name: "生成成长路线图" }).click();
+  await page.getByRole("link", { name: "查看已生成计划" }).click();
+
+  const firstAction = page.locator(".action-item").first();
+  const originalTitle = await firstAction.locator(".action-item-title").textContent();
+  await firstAction.locator(".action-item-buttons button").nth(1).click();
+  const dialog = page.locator(".action-edit-dialog");
+  await dialog.locator("input").first().fill(`${originalTitle} [adjusted]`);
+  await dialog.locator("textarea").nth(0).fill("今天先完成第一步，并留下可复核的过程记录。");
+  await dialog.locator('input[type="number"]').fill("2.5");
+  await dialog.locator("textarea").nth(1).fill("Submit a process record and a clear conclusion.");
+  await dialog.locator("select").selectOption("high");
+  await dialog.locator("button.button-primary").click();
+
+  const editedAction = page.locator(".action-item").filter({ hasText: "[adjusted]" }).first();
+  await expect(editedAction.locator(".action-item-title")).toContainText("[adjusted]");
+  await editedAction.locator(".action-blueprint summary").click();
+  await expect(editedAction).toContainText("2.5");
+  await expect(editedAction).toContainText("Submit a process record and a clear conclusion.");
+  await page.reload();
+  const reloadedAction = page.locator(".action-item").filter({ hasText: "[adjusted]" }).first();
+  await expect(reloadedAction.locator(".action-item-title")).toContainText("[adjusted]");
+  await reloadedAction.locator(".action-blueprint summary").click();
+  await expect(reloadedAction).toContainText("2.5");
+  await expect(reloadedAction).toContainText("Submit a process record and a clear conclusion.");
 });
 
 test("curriculum import generates a detailed algorithm topology and saves near-term actions", async ({ page }) => {
@@ -136,12 +167,43 @@ test("DeepSeek planning flow creates candidates and saves a personalized plan", 
   await page.getByRole("button", { name: "删除完成公开数据清洗" }).click();
   await expect(page.getByRole("button", { name: "删除完成公开数据清洗" })).toHaveCount(0);
   await expect(page.locator(".ai-planning-progress")).toHaveCount(0);
+  await page.locator(".ai-objective-editor input").fill("");
+  await page.locator(".ai-save-plan button.button-primary").click();
+  await expect(page.getByRole("alert")).toContainText("主线目标");
+  await page.locator(".ai-objective-editor input").fill("四周内完成一次学习产品数据分析方向验证。");
   await page.getByRole("button", { name: "保存到行动计划" }).click();
   await page.getByRole("link", { name: /已保存，查看行动计划/ }).click();
   const savedAction = page.locator(".action-item").filter({ hasText: "定义一个学习产品问题" });
   await expect(savedAction.locator(".action-item-title")).toHaveText("定义一个学习产品问题");
   await page.reload();
   await expect(savedAction.locator(".action-item-title")).toHaveText("定义一个学习产品问题");
+});
+
+test("student home can page through multiple plans and open plan history", async ({ page }) => {
+  await onboardHigherGrade(page);
+  await page.getByRole("link", { name: "目标诊断", exact: true }).click();
+  await page.getByRole("button", { name: "生成成长路线图" }).click();
+  await page.getByRole("link", { name: "查看已生成计划" }).click();
+  await expect(page.locator(".action-item")).toHaveCount(5);
+  await page.goto("/student/home");
+  await expect(page.getByRole("link", { name: "查看本地历史计划" })).toBeVisible();
+  const focusCard = page.locator(".today-focus-card");
+  const firstFocus = await focusCard.locator("strong").textContent();
+  await page.getByRole("button", { name: "查看下一个计划" }).click();
+  await expect(focusCard.locator("strong")).not.toHaveText(firstFocus || "");
+});
+
+test("graduate research context must be saved before the dual-track plan is generated", async ({ page }) => {
+  await onboardRole(page, "研究生");
+  await page.goto("/graduate/navigation");
+  await page.getByRole("button", { name: "保存研究起点" }).click();
+  await expect(page.getByRole("alert")).toContainText("研究方向");
+  await page.getByLabel("研究方向").fill("学习分析中的生成式 AI");
+  await page.getByLabel("希望靠近的产业或场景").fill("教育科技");
+  await page.getByRole("button", { name: "保存研究起点" }).click();
+  await expect(page.getByRole("status")).toContainText("已保存");
+  await page.getByRole("button", { name: "生成我的双线计划" }).click();
+  await expect(page.locator(".dual-lanes .task-list").first()).toBeVisible();
 });
 
 test("core workspaces avoid horizontal overflow on mobile", async ({ page }) => {

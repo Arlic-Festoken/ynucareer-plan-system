@@ -59,7 +59,8 @@ export default function StudentHomePage() {
 
   const dashboardActions = dashboard?.actions.length ? dashboard.actions : [fallbackAction];
   const actions = planActions.length ? planActions : dashboardActions;
-  const focusAction = actions[focusIndex] ?? actions[0] ?? fallbackAction;
+  const boundedFocusIndex = Math.min(focusIndex, Math.max(actions.length - 1, 0));
+  const focusAction = actions[boundedFocusIndex] ?? actions[0] ?? fallbackAction;
   const weakest = useMemo(() => {
     if (!dashboard) return null;
     return Object.entries(dashboard.abilityProfile.combinedScore).sort((left, right) => left[1] - right[1])[0];
@@ -76,11 +77,11 @@ export default function StudentHomePage() {
       <article className="today-actions">
         <div className="section-heading"><div><span className="section-kicker"><Compass size={15} /> 今日焦点</span><h2>先处理这一件事，再翻看其他计划。</h2></div>{dashboard?.unreadNotifications ? <Link className="notification-badge" to="/student/notifications"><Bell size={14} />{dashboard.unreadNotifications} 条新反馈</Link> : null}</div>
         <Link className="today-focus-card" to={focusAction.href}>
-          <span>{String(focusIndex + 1).padStart(2, "0")} / {actions.length}</span>
+          <span>{String(boundedFocusIndex + 1).padStart(2, "0")} / {actions.length}</span>
           <div><small>{focusAction.reason}</small><strong>{focusAction.title}</strong><p>{focusAction.detail}</p></div>
           <ArrowRight size={18} />
         </Link>
-        {actions.length > 1 && <div className="today-focus-controls"><button aria-label="查看上一个计划" disabled={focusIndex === 0} onClick={() => setFocusIndex((index) => Math.max(0, index - 1))} type="button">← 上一个</button><span>可翻看全部 {actions.length} 项计划</span><button aria-label="查看下一个计划" disabled={focusIndex === actions.length - 1} onClick={() => setFocusIndex((index) => Math.min(actions.length - 1, index + 1))} type="button">下一个 →</button></div>}
+        {actions.length > 1 && <div className="today-focus-controls"><button aria-label="查看上一个计划" disabled={boundedFocusIndex === 0} onClick={() => setFocusIndex(Math.max(0, boundedFocusIndex - 1))} type="button">← 上一个</button><span>可翻看全部 {actions.length} 项计划</span><button aria-label="查看下一个计划" disabled={boundedFocusIndex === actions.length - 1} onClick={() => setFocusIndex(Math.min(actions.length - 1, boundedFocusIndex + 1))} type="button">下一个 →</button></div>}
       </article>
       <aside className="ability-snapshot">
         <div><span className="section-kicker"><Gauge size={15} /> 七维能力</span><h2>{dashboard ? confidenceLabels[dashboard.abilityProfile.confidence] : "正在建立画像"}</h2><p>{dashboard?.abilityProfile.confidence === "low" ? "当前主要来自自评。提交并核验真实成果后，可信度才会提升。" : "画像同时参考自评和教师核验成果。"}</p></div>

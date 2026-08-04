@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ActionItem } from "../domain";
 import {
+  composeActionDetail,
   mergeActionDetail,
+  normalizeActionHours,
+  parseActionDetail,
   presentAction,
   selectFocusAction,
   summarizeActions,
@@ -71,6 +74,30 @@ describe("action plan presentation", () => {
     }));
     expect(result.description).toBe("先整理数据，再完成分析。");
     expect(result.completionStandard).toBe("提交一页含三项发现的报告。");
+  });
+
+  it("round-trips the editable time and completion fields", () => {
+    const detail = composeActionDetail("先完成数据清洗，再记录三个发现。", 3.25, "提交一份可复核的分析报告。");
+    expect(detail).toContain("投入时间：3.5 小时");
+    expect(parseActionDetail(detail)).toEqual({
+      description: "先完成数据清洗，再记录三个发现。",
+      investedHours: 3.5,
+      completionStandard: "提交一份可复核的分析报告。",
+    });
+    expect(presentAction(action({ detail })).timebox).toBe("3.5 小时");
+    expect(presentAction(action({ detail })).completionStandard).toBe("提交一份可复核的分析报告。");
+  });
+
+  it("keeps legacy AI detail markers readable and rejects invalid time", () => {
+    const legacy = "先完成数据清洗。\n\n投入时间：4 小时\n完成标准：提交一份报告。";
+    expect(parseActionDetail(legacy)).toEqual({
+      description: "先完成数据清洗。",
+      investedHours: 4,
+      completionStandard: "提交一份报告。",
+    });
+    expect(normalizeActionHours(0)).toBeNull();
+    expect(normalizeActionHours(0.1)).toBeNull();
+    expect(normalizeActionHours("not-a-number")).toBeNull();
   });
 
   it("summarizes action states without treating review as complete", () => {

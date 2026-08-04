@@ -17,6 +17,12 @@ export type ActionPlanSummary = {
   completed: number;
 };
 
+export type ActionDetailFields = {
+  description: string;
+  investedHours: number | null;
+  completionStandard: string;
+};
+
 const categoryGuides: Record<ActionTask["category"], Pick<ActionPlanPresentation, "steps" | "completionStandard" | "timebox">> = {
   course: {
     steps: ["圈定一个要掌握的知识点和参考材料", "完成学习并把关键方法整理成自己的话", "用练习、讲解或一页笔记检验理解"],
@@ -69,20 +75,52 @@ function schedule(dueDate: string, today: Date) {
   return { label: `${month}月${day}日${overdue ? "已到期" : "截止"}`, overdue };
 }
 
+export function normalizeActionHours(value: number | string | null | undefined) {
+  if (value === "" || value === null || value === undefined) return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  const rounded = Math.round(parsed * 2) / 2;
+  return rounded > 0 ? Math.min(80, rounded) : null;
+}
+
+export function parseActionDetail(detail: string): ActionDetailFields {
+  const raw = detail.trim();
+  const standardMarker = "完成标准：";
+  const timeMarker = "投入时间：";
+  const standardIndex = raw.indexOf(standardMarker);
+  const beforeStandard = standardIndex >= 0 ? raw.slice(0, standardIndex) : raw;
+  const completionStandard = standardIndex >= 0 ? raw.slice(standardIndex + standardMarker.length).trim() : "";
+  const timeIndex = beforeStandard.lastIndexOf(timeMarker);
+  const timeText = timeIndex >= 0 ? beforeStandard.slice(timeIndex + timeMarker.length).trim().replace(/小时.*$/, "") : "";
+  const investedHours = normalizeActionHours(timeText);
+  const description = (timeIndex >= 0 ? beforeStandard.slice(0, timeIndex) : beforeStandard).trim();
+  return { description, investedHours, completionStandard };
+}
+
+export function composeActionDetail(description: string, investedHours?: number | string | null, completionStandard?: string) {
+  const parsed = parseActionDetail(description);
+  const hours = normalizeActionHours(investedHours) ?? parsed.investedHours;
+  const standard = completionStandard?.trim() || parsed.completionStandard;
+  const suffix = [hours === null ? "" : `投入时间：${hours} 小时`, standard ? `完成标准：${standard}` : ""].filter(Boolean).join("\n");
+  const available = Math.max(0, 500 - (suffix ? suffix.length + 1 : 0));
+  const base = (parsed.description || description.trim()).slice(0, available);
+  return `${base}${base && suffix ? "\n" : ""}${suffix}`.slice(0, 500);
+}
+
 export function mergeActionDetail(detail: string, evidence: string) {
-  const suffix = evidence.trim() ? `\n完成标准：${evidence.trim()}` : "";
-  return `${detail.trim().slice(0, Math.max(0, 500 - suffix.length))}${suffix}`.slice(0, 500);
+  const parsed = parseActionDetail(detail);
+  return composeActionDetail(parsed.description, parsed.investedHours, evidence.trim() || parsed.completionStandard);
 }
 
 export function presentAction(action: ActionItem, today = new Date()): ActionPlanPresentation {
-  const [description, explicitStandard] = action.detail.split(/\n完成标准：/, 2);
+  const parsed = parseActionDetail(action.detail);
   const guide = categoryGuides[action.category] || categoryGuides.practice;
   const due = schedule(action.dueDate, today);
   return {
-    description: description.trim() || action.detail,
+    description: parsed.description || action.detail,
     steps: guide.steps,
-    completionStandard: explicitStandard?.trim() || guide.completionStandard,
-    timebox: guide.timebox,
+    completionStandard: parsed.completionStandard || guide.completionStandard,
+    timebox: parsed.investedHours === null ? guide.timebox : `${parsed.investedHours} 小时`,
     scheduleLabel: due.label,
     sourceLabel: sourceLabels[action.source] || "行动计划",
     isOverdue: due.overdue,

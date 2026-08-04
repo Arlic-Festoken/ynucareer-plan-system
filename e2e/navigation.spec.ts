@@ -34,6 +34,7 @@ test("low-grade student completes an exploration action", async ({ page }) => {
 
   await page.getByLabel("行动名称").fill("完成一次实验室开放日观察记录");
   await page.getByLabel("怎么开始").fill("观察开放日中的三个真实问题，整理成一页场景记录。");
+  await page.getByLabel("新增行动完成标准").fill("提交一页场景记录。");
   await page.getByLabel("分类").selectOption("practice");
   await page.getByLabel("截止日期").fill("2026-08-15");
   await page.getByRole("button", { name: "加入行动" }).click();

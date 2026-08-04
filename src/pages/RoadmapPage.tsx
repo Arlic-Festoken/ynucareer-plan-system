@@ -6,7 +6,7 @@ import PageShell from "../components/common/PageShell";
 import EmptyState from "../components/product/EmptyState";
 import ProgressRail from "../components/product/ProgressRail";
 import type { ActionItem } from "../domain";
-import { presentAction } from "../services/actionPlan";
+import { composeActionDetail, normalizeActionHours, parseActionDetail, presentAction } from "../services/actionPlan";
 import { useCareerStore } from "../store/careerStore";
 
 const categoryLabels = { course: "课程", project: "项目", practice: "实践", reflection: "反思", research: "科研", career: "生涯" };
@@ -44,6 +44,8 @@ export default function RoadmapPage() {
   const [message, setMessage] = useState("");
   const [title, setTitle] = useState("");
   const [detail, setDetail] = useState("");
+  const [addHours, setAddHours] = useState("");
+  const [addEvidence, setAddEvidence] = useState("");
   const [addCategory, setAddCategory] = useState<ActionItem["category"]>("practice");
   const [addPriority, setAddPriority] = useState<ActionItem["priority"]>("medium");
   const [addDueDate, setAddDueDate] = useState("");
@@ -54,6 +56,8 @@ export default function RoadmapPage() {
   const [editingAction, setEditingAction] = useState<ActionItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDetail, setEditDetail] = useState("");
+  const [editHours, setEditHours] = useState("");
+  const [editEvidence, setEditEvidence] = useState("");
   const [editPriority, setEditPriority] = useState<ActionItem["priority"]>("medium");
   const explorer = profile.grade <= 2;
   const localTasks = explorer ? awakening.actionTasks : roadmapTasks;
@@ -117,17 +121,29 @@ export default function RoadmapPage() {
   }
 
   function openEdit(action: ActionItem) {
+    const parsed = parseActionDetail(action.detail);
     setEditingAction(action);
     setEditTitle(action.title);
-    setEditDetail(action.detail);
+    setEditDetail(parsed.description);
+    setEditHours(parsed.investedHours === null ? "" : String(parsed.investedHours));
+    setEditEvidence(parsed.completionStandard || presentAction(action).completionStandard);
     setEditPriority(action.priority);
   }
 
   async function saveEdit(event: React.FormEvent) {
     event.preventDefault();
     if (!editingAction) return;
+    if (!editTitle.trim() || !editDetail.trim() || !editEvidence.trim()) {
+      setMessage("请补全行动名称、怎么开始和完成标准。");
+      return;
+    }
+    const hours = editHours.trim() ? normalizeActionHours(editHours) : null;
+    if (editHours.trim() && hours === null) {
+      setMessage("投入时间需要填写大于 0 的小时数。");
+      return;
+    }
     try {
-      const result = await updateAction(editingAction.id, { title: editTitle, detail: editDetail, priority: editPriority });
+      const result = await updateAction(editingAction.id, { title: editTitle.trim(), detail: composeActionDetail(editDetail, hours, editEvidence), priority: editPriority });
       setActions((current) => current.map((item) => item.id === editingAction.id ? result.action : item));
       setEditingAction(null);
       setMessage("行动计划已更新。");
@@ -149,11 +165,19 @@ export default function RoadmapPage() {
 
   async function add(event: React.FormEvent) {
     event.preventDefault();
-    if (!title.trim() || !detail.trim()) return;
+    if (!title.trim() || !detail.trim() || !addEvidence.trim()) {
+      setMessage("请补全行动名称、怎么开始和完成标准。");
+      return;
+    }
+    const hours = addHours.trim() ? normalizeActionHours(addHours) : null;
+    if (addHours.trim() && hours === null) {
+      setMessage("投入时间需要填写大于 0 的小时数。");
+      return;
+    }
     try {
       const { action } = await createAction({
         title: title.trim(),
-        detail: detail.trim(),
+        detail: composeActionDetail(detail, hours, addEvidence),
         category: addCategory,
         priority: addPriority,
         dueDate: addDueDate,
@@ -163,6 +187,8 @@ export default function RoadmapPage() {
       setActions((current) => [...current, action]);
       setTitle("");
       setDetail("");
+      setAddHours("");
+      setAddEvidence("");
       setAddDueDate("");
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "行动添加失败。");
@@ -207,7 +233,7 @@ export default function RoadmapPage() {
         </div>
       </article>)}</div>
     </section>)}</section>}
-    <form className="quick-add" onSubmit={add}><div><span className="section-kicker">补充自己的行动</span><div className="quick-add-fields"><label>行动名称<input onChange={(event) => setTitle(event.target.value)} placeholder="例如：完成一份数据作品说明" required value={title} /></label><label>怎么开始<textarea onChange={(event) => setDetail(event.target.value)} placeholder="写清第一步、投入时间和完成标准。" required rows={2} value={detail} /></label><label>分类<select onChange={(event) => setAddCategory(event.target.value as ActionItem["category"])} value={addCategory}>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>重要程度<select onChange={(event) => setAddPriority(event.target.value as ActionItem["priority"])} value={addPriority}><option value="high">重要</option><option value="medium">普通</option><option value="low">低优先</option></select></label><label>截止日期<input onChange={(event) => setAddDueDate(event.target.value)} type="date" value={addDueDate} /></label></div></div><button className="button button-secondary" type="submit"><Plus size={17} />加入行动</button></form>
+    <form className="quick-add" onSubmit={add}><div><span className="section-kicker">补充自己的行动</span><div className="quick-add-fields"><label>行动名称<input onChange={(event) => setTitle(event.target.value)} placeholder="例如：完成一份数据作品说明" required value={title} /></label><label>怎么开始<textarea onChange={(event) => setDetail(event.target.value)} placeholder="写清第一步，具体到今天能开始。" required rows={2} value={detail} /></label><label>投入时间（小时）<input aria-label="新增行动投入时间" max="80" min="0.5" onChange={(event) => setAddHours(event.target.value)} step="0.5" type="number" value={addHours} /></label><label>完成标准<textarea aria-label="新增行动完成标准" onChange={(event) => setAddEvidence(event.target.value)} placeholder="写清什么结果可以算完成。" required rows={2} value={addEvidence} /></label><label>分类<select onChange={(event) => setAddCategory(event.target.value as ActionItem["category"])} value={addCategory}>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>重要程度<select onChange={(event) => setAddPriority(event.target.value as ActionItem["priority"])} value={addPriority}><option value="high">重要</option><option value="medium">普通</option><option value="low">低优先</option></select></label><label>截止日期<input onChange={(event) => setAddDueDate(event.target.value)} type="date" value={addDueDate} /></label></div></div><button className="button button-secondary" type="submit"><Plus size={17} />加入行动</button></form>
     {evidenceAction && <div className="modal-backdrop" role="presentation"><form aria-label="提交行动成果" className="evidence-dialog" onSubmit={submitEvidence}>
       <div><div><span className="section-kicker">成果核验</span><h2>{evidenceAction.title}</h2></div><button aria-label="关闭" onClick={() => setEvidenceAction(null)} type="button"><X size={18} /></button></div>
       <label>成果说明<textarea maxLength={600} onChange={(event) => setEvidenceDescription(event.target.value)} placeholder="说明完成内容、承担部分和结果。" required rows={4} value={evidenceDescription} /></label>
@@ -218,7 +244,9 @@ export default function RoadmapPage() {
     {editingAction && <div className="modal-backdrop" role="presentation"><form aria-label="编辑行动计划" className="evidence-dialog action-edit-dialog" onSubmit={saveEdit}>
       <div><div><span className="section-kicker">调整行动</span><h2>把这一步改成你愿意开始的版本。</h2></div><button aria-label="关闭" onClick={() => setEditingAction(null)} type="button"><X size={18} /></button></div>
       <label>行动名称<input maxLength={120} onChange={(event) => setEditTitle(event.target.value)} required value={editTitle} /></label>
-      <label>怎么开始 / 投入安排<textarea maxLength={500} onChange={(event) => setEditDetail(event.target.value)} required rows={5} value={editDetail} /></label>
+      <label>怎么开始 / 投入安排<textarea maxLength={320} onChange={(event) => setEditDetail(event.target.value)} required rows={5} value={editDetail} /></label>
+      <label>投入时间（小时）<input aria-label="编辑行动投入时间" max="80" min="0.5" onChange={(event) => setEditHours(event.target.value)} step="0.5" type="number" value={editHours} /></label>
+      <label>完成标准<textarea aria-label="编辑行动完成标准" maxLength={220} onChange={(event) => setEditEvidence(event.target.value)} required rows={3} value={editEvidence} /></label>
       <label>重要程度<select onChange={(event) => setEditPriority(event.target.value as ActionItem["priority"])} value={editPriority}><option value="high">重要 · 优先完成</option><option value="medium">普通 · 按节奏推进</option><option value="low">低优先 · 有余力再做</option></select></label>
       <div><button className="button button-quiet" onClick={() => setEditingAction(null)} type="button">取消</button><button className="button button-primary" type="submit"><Save size={15} />保存修改</button></div>
     </form></div>}

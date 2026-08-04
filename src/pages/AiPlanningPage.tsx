@@ -5,6 +5,7 @@ import { getCoachStatus, type CoachStatus } from "../api/careerCoach";
 import { requestDirectionCandidates, requestPersonalizedPlan } from "../api/careerPlanner";
 import PageShell from "../components/common/PageShell";
 import type { ActionTask, AiActionPlan, AiDirectionCandidate, GenerationTrace } from "../domain";
+import { composeActionDetail, normalizeActionHours } from "../services/actionPlan";
 import { preserveTaskProgress, recommendDirections } from "../services/recommendation";
 import { useCareerStore } from "../store/careerStore";
 
@@ -13,16 +14,28 @@ const sceneOptions = ["教育科技", "人工智能应用", "数据与商业", "
 function toTasks(candidate: AiDirectionCandidate, tasks: AiActionPlan["tasks"], trace?: GenerationTrace | null): ActionTask[] {
   return tasks.map((task, index) => ({
     id: `ai-plan-${candidate.id}-${index + 1}`,
-    title: task.title,
-    detail: `${task.detail}\n\n投入时间：${task.estimatedHours ?? 2} 小时\n完成标准：${task.evidence}`,
+    title: task.title.trim(),
+    detail: composeActionDetail(task.detail, normalizeActionHours(task.estimatedHours) ?? 2, task.evidence),
     category: task.category,
     priority: task.priority,
     semester: task.week,
     completed: false,
-    estimatedHours: task.estimatedHours ?? 2,
+    estimatedHours: normalizeActionHours(task.estimatedHours) ?? 2,
     evidence: [`计划产出：${task.evidence}`, `方向：${candidate.title}`],
     provenance: trace || undefined,
   }));
+}
+
+function validatePlan(plan: AiActionPlan) {
+  if (!plan.objective.trim()) return "请先填写主线目标。";
+  if (!plan.tasks.length) return "至少保留一项行动。";
+  for (const [index, task] of plan.tasks.entries()) {
+    if (!task.title.trim()) return `第 ${index + 1} 项行动需要填写名称。`;
+    if (!task.detail.trim()) return `“${task.title || `第 ${index + 1} 项行动`}”需要填写怎么开始。`;
+    if (!task.evidence.trim()) return `“${task.title || `第 ${index + 1} 项行动`}”需要填写完成标准。`;
+    if (task.estimatedHours !== undefined && normalizeActionHours(task.estimatedHours) === null) return `“${task.title}”的投入时间需要大于 0。`;
+  }
+  return "";
 }
 
 export default function AiPlanningPage() {
@@ -104,6 +117,12 @@ export default function AiPlanningPage() {
 
   function savePlan() {
     if (!selected || !aiPlanning.actionPlan) return;
+    const validationError = validatePlan(aiPlanning.actionPlan);
+    if (validationError) {
+      setError(validationError);
+      setSaved(false);
+      return;
+    }
     const nextTasks = toTasks(selected, aiPlanning.actionPlan.tasks, aiPlanning.generationTrace);
     if (profile.grade <= 2) {
       setAwakening({
@@ -160,7 +179,7 @@ export default function AiPlanningPage() {
           <div className="ai-plan-task-fields">
             <label>行动名称<input maxLength={100} onChange={(event) => updatePlanTask(index, { title: event.target.value })} value={task.title} /></label>
             <label>重要程度<select aria-label={`${task.title}重要程度`} onChange={(event) => updatePlanTask(index, { priority: event.target.value as ActionTask["priority"] })} value={task.priority}><option value="high">重要 · 优先完成</option><option value="medium">普通 · 按节奏推进</option><option value="low">低优先 · 有余力再做</option></select></label>
-            <label>预计投入（小时）<input aria-label={`${task.title}预计投入时间`} max="20" min="1" onChange={(event) => updatePlanTask(index, { estimatedHours: Number(event.target.value) })} type="number" value={task.estimatedHours ?? Math.max(1, Math.round(aiPlanning.timeBudgetHours / aiPlanning.actionPlan!.tasks.length))} /></label>
+            <label>预计投入（小时）<input aria-label={`${task.title}预计投入时间`} max="20" min="0.5" onChange={(event) => updatePlanTask(index, { estimatedHours: event.target.value ? Number(event.target.value) : undefined })} step="0.5" type="number" value={task.estimatedHours ?? Math.max(1, Math.round(aiPlanning.timeBudgetHours / aiPlanning.actionPlan!.tasks.length))} /></label>
           </div>
           <label className="ai-plan-task-detail">怎么开始<textarea maxLength={320} onChange={(event) => updatePlanTask(index, { detail: event.target.value })} rows={3} value={task.detail} /></label>
           <label className="ai-plan-task-detail">完成标准<textarea maxLength={220} onChange={(event) => updatePlanTask(index, { evidence: event.target.value })} rows={2} value={task.evidence} /></label>
