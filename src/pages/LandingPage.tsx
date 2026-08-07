@@ -18,8 +18,7 @@ export default function LandingPage() {
         <div className="hero-actions"><Link className="button button-primary" to="/onboarding">开始建立我的路径 <ArrowRight size={18} /></Link><a className="button button-quiet" href="#how-it-works">查看适用阶段</a></div>
       </div>
       <aside className="hero-signal" aria-label="行动计划预览">
-        <div className="signal-topline"><span>PERSONAL PLAN / 01</span><i>本地生成</i></div>
-        <div className="signal-profile"><span>高年级 · 就业准备</span><strong>数据分析方向</strong></div>
+        <div className="signal-topline"><span>个人计划 / 01</span><i>本地生成</i></div>
         <div className="signal-hero"><span>当前优先行动</span><strong>完成一份<br />岗位能力对照</strong><p>把岗位要求、已有证据和下一步写进同一张判断表。</p></div>
         <div className="signal-task"><span><Check size={15} /></span><div><strong>加入一项校内数据实践</strong><small>来源已核验 · 已加入计划</small></div></div>
         <div className="signal-task"><span><CircleDot size={15} /></span><div><strong>写下 1 项能力证据</strong><small>完成后保存 · 待进行</small></div></div>

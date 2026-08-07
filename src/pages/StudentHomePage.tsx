@@ -1,11 +1,12 @@
 import { ArrowRight, Bell, CalendarDays, CheckCircle2, Compass, Gauge, Network, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { getActions, getStudentDashboard, type StudentDashboard } from "../api/pilot";
+import { createAction, getActions, getStudentDashboard, type StudentDashboard } from "../api/pilot";
 import AiCoachCard from "../components/common/AiCoachCard";
 import PageShell from "../components/common/PageShell";
 import { abilityLabels } from "../data/catalog";
 import type { DashboardAction } from "../domain";
+import { composeActionDetail } from "../services/actionPlan";
 import { useCareerStore } from "../store/careerStore";
 
 const paths = { employment: "就业", recommendation: "推免", postgraduate: "考研", "civil-service": "考公" };
@@ -32,6 +33,7 @@ export default function StudentHomePage() {
   const [planActions, setPlanActions] = useState<DashboardAction[]>([]);
   const [focusIndex, setFocusIndex] = useState(0);
   const [dashboardError, setDashboardError] = useState("");
+  const [aiSaveMessage, setAiSaveMessage] = useState("");
   const explorer = profile.grade <= 2;
   const localTasks = explorer ? awakening.actionTasks : roadmapTasks;
   const completed = localTasks.filter((task) => task.completed).length;
@@ -67,6 +69,21 @@ export default function StudentHomePage() {
   }, [dashboard]);
   const dateLabel = new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", weekday: "long" }).format(new Date());
 
+  async function saveCoachAction(action: { title: string; why: string }) {
+    const { action: saved } = await createAction({
+      title: action.title,
+      detail: composeActionDetail(action.why, 1, "完成这项补充行动后，写下结果和下一步取舍。"),
+      category: "practice",
+      priority: "medium",
+      lane: explorer ? "exploration" : "growth",
+      source: "ai",
+      sourceId: `coach-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    });
+    setPlanActions((current) => [actionItemToDashboard(saved), ...current.filter((item) => item.id !== saved.id)]);
+    setFocusIndex(0);
+    setAiSaveMessage("AI 补充行动已加入行动中心。");
+  }
+
   return <PageShell>
     <section className="today-heading">
       <div><span className="section-kicker">{profile.major} · {explorer ? "探索阶段" : `${paths[profile.targetPath]}准备中`}</span><h1>今天，先推进<br />最重要的一步。</h1><p>{dateLabel} · 工作台按截止时间、教师反馈和能力缺口排序。</p></div>
@@ -99,6 +116,7 @@ export default function StudentHomePage() {
     </section>
 
     {dashboardError && <p className="sync-note" role="status">{dashboardError} 本地历史计划仍可继续使用。</p>}
-    <AiCoachCard input={{ profile, nextAction: { title: focusAction.title, detail: focusAction.detail } }} />
+    <AiCoachCard input={{ profile, nextAction: { title: focusAction.title, detail: focusAction.detail } }} onSaveAction={saveCoachAction} />
+    {aiSaveMessage && <p className="save-message" role="status">{aiSaveMessage}</p>}
   </PageShell>;
 }

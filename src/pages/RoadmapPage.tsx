@@ -1,6 +1,6 @@
 import { ArrowRight, BadgeCheck, CalendarDays, ChevronDown, Circle, CheckCircle2, FileUp, LoaderCircle, Pencil, Plus, Route, Save, Star, TimerReset, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { createAction, deleteAction, getActions, submitActionEvidence, updateAction } from "../api/pilot";
 import PageShell from "../components/common/PageShell";
 import EmptyState from "../components/product/EmptyState";
@@ -14,6 +14,22 @@ const statusLabels = { planned: "待开始", in_progress: "进行中", submitted
 
 function localLane(explorer: boolean) {
   return explorer ? "exploration" as const : "growth" as const;
+}
+
+function actionAnchorId(sourceId: string) {
+  return `action-${sourceId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+}
+
+function canAdvanceAction(action: ActionItem) {
+  return !["submitted", "completed"].includes(action.status);
+}
+
+function nextActionStatus(action: ActionItem): ActionItem["status"] {
+  return action.status === "planned" ? "in_progress" : "completed";
+}
+
+function isInteractiveActionTarget(target: EventTarget | null) {
+  return target instanceof HTMLElement && Boolean(target.closest("button,a,summary,details,input,textarea,select,label"));
 }
 
 function ActionBlueprint({ action }: { action: ActionItem }) {
@@ -36,6 +52,7 @@ function ActionBlueprint({ action }: { action: ActionItem }) {
 }
 
 export default function RoadmapPage() {
+  const location = useLocation();
   const profile = useCareerStore((state) => state.profile);
   const awakening = useCareerStore((state) => state.awakening);
   const roadmapTasks = useCareerStore((state) => state.roadmapTasks);
@@ -61,14 +78,19 @@ export default function RoadmapPage() {
   const [editPriority, setEditPriority] = useState<ActionItem["priority"]>("medium");
   const explorer = profile.grade <= 2;
   const localTasks = explorer ? awakening.actionTasks : roadmapTasks;
+  const focusSourceId = useMemo(() => new URLSearchParams(location.search).get("focusSourceId"), [location.search]);
 
   useEffect(() => {
     let active = true;
     async function load() {
       try {
         let remote = (await getActions()).actions;
-        if (!remote.length && localTasks.length) {
-          const imported = await Promise.all(localTasks.map((task) => createAction({
+        const remoteSourceIds = new Set(remote.map((action) => action.sourceId));
+        const remoteTitles = new Set(remote.map((action) => action.title));
+        const shouldImportWithExistingActions = (task: typeof localTasks[number]) => task.id.startsWith("ai-plan-") && !remoteTitles.has(task.title);
+        const missingLocalTasks = localTasks.filter((task) => !remoteSourceIds.has(task.id) && (!remote.length || shouldImportWithExistingActions(task)));
+        if (missingLocalTasks.length) {
+          const imported = await Promise.all(missingLocalTasks.map((task) => createAction({
             title: task.title,
             detail: task.detail,
             category: task.category,
@@ -79,7 +101,7 @@ export default function RoadmapPage() {
             dueDate: task.dueDate,
             trace: task.provenance,
           }).then(({ action }) => task.completed ? updateAction(action.id, { status: "completed", reflection: task.reflection || "" }).then((result) => result.action) : action)));
-          remote = imported;
+          remote = [...remote, ...imported];
         }
         if (active) setActions(remote);
       } catch (reason) {
@@ -102,6 +124,14 @@ export default function RoadmapPage() {
     return [...lanes.entries()];
   }, [actions]);
 
+  useEffect(() => {
+    if (!focusSourceId || loading) return;
+    const element = document.getElementById(actionAnchorId(focusSourceId));
+    if (!element) return;
+    element.scrollIntoView({ block: "center", behavior: "smooth" });
+    element.focus({ preventScroll: true });
+  }, [actions, focusSourceId, loading]);
+
   async function patch(action: ActionItem, status: ActionItem["status"], nextReflection = action.reflection) {
     try {
       const result = await updateAction(action.id, { status, reflection: nextReflection });
@@ -109,6 +139,23 @@ export default function RoadmapPage() {
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "行动更新失败。");
     }
+  }
+
+  async function advance(action: ActionItem) {
+    if (!canAdvanceAction(action)) return;
+    await patch(action, nextActionStatus(action));
+  }
+
+  function handleActionCardClick(event: React.MouseEvent<HTMLElement>, action: ActionItem) {
+    if (!canAdvanceAction(action) || isInteractiveActionTarget(event.target)) return;
+    void advance(action);
+  }
+
+  function handleActionCardKeyDown(event: React.KeyboardEvent<HTMLElement>, action: ActionItem) {
+    if (!canAdvanceAction(action) || isInteractiveActionTarget(event.target)) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    void advance(action);
   }
 
   async function toggleImportant(action: ActionItem) {
@@ -221,11 +268,11 @@ export default function RoadmapPage() {
     <section className="roadmap-overview"><div><Route size={27} /><div><span className="section-kicker">服务端行动档案</span><h2>{actions.length ? "你的行动正在积累证据" : "先生成一份有起点的计划"}</h2><p>{actions.length ? "推进状态、提交成果，再根据反馈调整。" : explorer ? "先完成方向探索。" : "先完成目标诊断。"}</p></div></div>{actions.length > 0 && <ProgressRail current={completed} label="已完成" total={actions.length} />}</section>
     {loading ? <div className="opportunity-loading" role="status"><LoaderCircle size={20} />正在同步行动…</div> : !actions.length ? <EmptyState action={explorer ? "去完成方向探索" : "去生成行动计划"} detail="生成后的任务会自动进入这里，并按账号跨设备保存。" title="这里还没有行动" to={entry} /> : <section className="authoritative-actions">{groups.map(([lane, items]) => <section key={lane}>
       <div className="roadmap-group-heading"><span>{lane}</span><p>{items.filter((item) => item.status === "completed").length} / {items.length} 已完成</p></div>
-      <div className="action-item-list">{items.map((action) => <article className={`action-item is-${action.status}`} key={action.id}>
-        <button aria-label={action.status === "completed" ? `${action.title}已完成` : `推进${action.title}`} className="task-toggle" disabled={["submitted", "completed"].includes(action.status)} onClick={() => void patch(action, action.status === "planned" ? "in_progress" : "completed")} type="button">{action.status === "completed" ? <CheckCircle2 size={21} /> : <Circle size={21} />}</button>
+      <div className="action-item-list">{items.map((action) => <article aria-label={canAdvanceAction(action) ? `点击计划卡片推进：${action.title}` : undefined} className={`action-item is-${action.status} ${focusSourceId === action.sourceId ? "is-focused" : ""}`} data-source-id={action.sourceId} id={actionAnchorId(action.sourceId)} key={action.id} onClick={(event) => handleActionCardClick(event, action)} onKeyDown={(event) => handleActionCardKeyDown(event, action)} tabIndex={canAdvanceAction(action) || focusSourceId === action.sourceId ? 0 : undefined}>
+        <button aria-label={action.status === "completed" ? `${action.title}已完成` : action.status === "planned" ? `开始推进${action.title}` : `标记完成${action.title}`} className="task-toggle" disabled={!canAdvanceAction(action)} onClick={() => void advance(action)} type="button">{action.status === "completed" ? <CheckCircle2 size={21} /> : <Circle size={21} />}</button>
         <div className="action-item-copy"><div className="action-item-meta"><span>{String(items.indexOf(action) + 1).padStart(2, "0")}</span><span>{categoryLabels[action.category]}</span><span>{statusLabels[action.status]}</span><span className={presentAction(action).isOverdue ? "is-overdue" : ""}><CalendarDays size={12} />{presentAction(action).scheduleLabel}</span></div><strong className="action-item-title">{action.title}</strong><p>{presentAction(action).description}</p>{action.reflection && <blockquote>{action.reflection}</blockquote>}<ActionBlueprint action={action} /></div>
         <div className="action-item-buttons">
-          {! ["submitted", "completed"].includes(action.status) && <><button aria-label={action.priority === "high" ? `取消重要：${action.title}` : `标记重要：${action.title}`} onClick={() => void toggleImportant(action)} type="button"><Star size={14} />{action.priority === "high" ? "重要" : "标记重要"}</button><button onClick={() => openEdit(action)} type="button"><Pencil size={14} />编辑</button><button className="danger-action" onClick={() => void remove(action)} type="button"><Trash2 size={14} />删除</button></>}
+          {! ["submitted", "completed"].includes(action.status) && <><button aria-label={action.priority === "high" ? `取消重要：${action.title}` : `标记重要：${action.title}`} className={action.priority === "high" ? "is-important" : ""} onClick={() => void toggleImportant(action)} type="button"><Star size={14} />{action.priority === "high" ? "重要" : "标记重要"}</button><button onClick={() => openEdit(action)} type="button"><Pencil size={14} />编辑</button><button className="danger-action" onClick={() => void remove(action)} type="button"><Trash2 size={14} />删除</button></>}
           {action.source === "opportunity" && <Link to="/student/opportunities">查看资源 <ArrowRight size={14} /></Link>}
           {!["submitted", "completed"].includes(action.status) && <button onClick={() => { setEvidenceAction(action); setReflection(action.reflection); }} type="button"><FileUp size={14} />提交成果</button>}
           {action.status === "changes_requested" && <span>教师已退回，请补充后重新提交。</span>}

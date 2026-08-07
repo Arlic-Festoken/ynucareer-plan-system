@@ -47,6 +47,7 @@ export type ActionTask = {
   priority: "high" | "medium" | "low";
   semester: string;
   completed: boolean;
+  pinned?: boolean;
   estimatedHours?: number;
   reflection?: string;
   evidence?: string[];

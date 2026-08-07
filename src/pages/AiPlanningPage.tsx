@@ -11,8 +11,8 @@ import { useCareerStore } from "../store/careerStore";
 
 const sceneOptions = ["教育科技", "人工智能应用", "数据与商业", "智慧医疗", "智能制造", "数字公共服务"];
 
-function toTasks(candidate: AiDirectionCandidate, tasks: AiActionPlan["tasks"], trace?: GenerationTrace | null): ActionTask[] {
-  return tasks.map((task, index) => ({
+function toTasks(candidate: AiDirectionCandidate, plan: AiActionPlan, trace?: GenerationTrace | null): ActionTask[] {
+  const actionTasks = plan.tasks.map((task, index) => ({
     id: `ai-plan-${candidate.id}-${index + 1}`,
     title: task.title.trim(),
     detail: composeActionDetail(task.detail, normalizeActionHours(task.estimatedHours) ?? 2, task.evidence),
@@ -24,6 +24,34 @@ function toTasks(candidate: AiDirectionCandidate, tasks: AiActionPlan["tasks"], 
     evidence: [`计划产出：${task.evidence}`, `方向：${candidate.title}`],
     provenance: trace || undefined,
   }));
+  const checkpoints = plan.checkpoints.map((item) => `${item.week}：${item.question}`).join("；");
+  const supportTasks: ActionTask[] = checkpoints ? [{
+    id: `ai-plan-${candidate.id}-review`,
+    title: `复盘节点：${candidate.title}`,
+    detail: composeActionDetail(`按计划节奏完成复盘：${checkpoints}`, 1, "写下继续、调整或停止的判断，并同步更新下一步行动。"),
+    category: "reflection",
+    priority: "medium",
+    semester: "复盘节点",
+    completed: false,
+    estimatedHours: 1,
+    evidence: [`复盘问题：${checkpoints}`],
+    provenance: trace || undefined,
+  }] : [];
+  if (plan.risks.length) {
+    supportTasks.push({
+      id: `ai-plan-${candidate.id}-risk`,
+      title: `注意偏差：${candidate.title}`,
+      detail: composeActionDetail(`提前检查这些偏差：${plan.risks.join("；")}`, 1, "至少写出一条避免偏差的调整动作。"),
+      category: "reflection",
+      priority: "medium",
+      semester: "注意偏差",
+      completed: false,
+      estimatedHours: 1,
+      evidence: plan.risks.map((risk) => `偏差提醒：${risk}`),
+      provenance: trace || undefined,
+    });
+  }
+  return [...actionTasks, ...supportTasks];
 }
 
 function validatePlan(plan: AiActionPlan) {
@@ -52,6 +80,7 @@ export default function AiPlanningPage() {
   const [planLoading, setPlanLoading] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [savedFocusId, setSavedFocusId] = useState<string | null>(null);
   const selected = aiPlanning.directionResult?.candidates.find((item) => item.id === aiPlanning.selectedCandidateId) ?? null;
   const ruleDirections = useMemo(() => recommendDirections(profile).slice(0, 3), [profile]);
 
@@ -74,6 +103,7 @@ export default function AiPlanningPage() {
       ? aiPlanning.preferredScenes.filter((item) => item !== scene)
       : [...aiPlanning.preferredScenes, scene].slice(0, 3);
     setAiPlanning({ preferredScenes: next, directionResult: null, selectedCandidateId: null, actionPlan: null });
+    setSavedFocusId(null);
   }
 
   async function generateDirections() {
@@ -83,6 +113,7 @@ export default function AiPlanningPage() {
     try {
       const response = await requestDirectionCandidates(context);
       setAiPlanning({ directionResult: response.result, selectedCandidateId: null, actionPlan: null, generatedAt: response.generatedAt, generationTrace: response.trace });
+      setSavedFocusId(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "AI 方向分析暂时不可用，请稍后重试。");
     } finally {
@@ -98,6 +129,7 @@ export default function AiPlanningPage() {
     try {
       const response = await requestPersonalizedPlan({ ...context, selectedDirection: selected, horizonWeeks: aiPlanning.horizonWeeks });
       setAiPlanning({ actionPlan: response.result, generatedAt: response.generatedAt, generationTrace: response.trace });
+      setSavedFocusId(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "AI 行动计划暂时不可用，请稍后重试。");
     } finally {
@@ -108,11 +140,15 @@ export default function AiPlanningPage() {
   function updatePlanTask(index: number, patch: Partial<AiActionPlan["tasks"][number]>) {
     if (!aiPlanning.actionPlan) return;
     setAiPlanning({ actionPlan: { ...aiPlanning.actionPlan, tasks: aiPlanning.actionPlan.tasks.map((task, taskIndex) => taskIndex === index ? { ...task, ...patch } : task) } });
+    setSaved(false);
+    setSavedFocusId(null);
   }
 
   function removePlanTask(index: number) {
     if (!aiPlanning.actionPlan || aiPlanning.actionPlan.tasks.length <= 1) return;
     setAiPlanning({ actionPlan: { ...aiPlanning.actionPlan, tasks: aiPlanning.actionPlan.tasks.filter((_, taskIndex) => taskIndex !== index) } });
+    setSaved(false);
+    setSavedFocusId(null);
   }
 
   function savePlan() {
@@ -123,7 +159,7 @@ export default function AiPlanningPage() {
       setSaved(false);
       return;
     }
-    const nextTasks = toTasks(selected, aiPlanning.actionPlan.tasks, aiPlanning.generationTrace);
+    const nextTasks = toTasks(selected, aiPlanning.actionPlan, aiPlanning.generationTrace);
     if (profile.grade <= 2) {
       setAwakening({
         selectedDirectionId: selected.id,
@@ -132,8 +168,10 @@ export default function AiPlanningPage() {
     } else {
       setRoadmapTasks(preserveTaskProgress(nextTasks, roadmapTasks));
     }
+    setSavedFocusId(nextTasks[0]?.id ?? null);
     setSaved(true);
   }
+  const savedLink = savedFocusId ? `/student/roadmap?focusSourceId=${encodeURIComponent(savedFocusId)}` : "/student/roadmap";
 
   return <PageShell eyebrow="DeepSeek · 个性化规划" title="把宽泛兴趣，缩小成可以验证的方向。" description="AI 结合画像与现实约束提出候选；最终选择仍由你的真实行动决定。">
     <section className="ai-planner-intro">
@@ -154,7 +192,8 @@ export default function AiPlanningPage() {
     </section>
 
     {aiPlanning.directionResult && <section className="ai-direction-section">
-      <div className="ai-section-heading"><div><span className="section-kicker">02 · 方向候选</span><h2>比较问题场景，不只比较岗位名称。</h2><p>{aiPlanning.directionResult.overview} 点击一张卡片，就把它设为你的 AI 主线；生成计划后仍可修改目标和任务。</p></div><Target size={28} /></div>
+      <div className="ai-section-heading"><div><span className="section-kicker">02 · 方向候选</span><h2>比较问题场景，不只比较岗位名称。</h2><p>{aiPlanning.directionResult.overview}</p></div><Target size={28} /></div>
+      <div className="ai-selection-callout"><Sparkles size={16} /><strong>点击下方任一方向卡片，就把它设为你的 AI 主线。</strong><span>选中后卡片会出现高亮边框，个性化行动会根据这张卡片生成。</span></div>
       <div className="ai-direction-grid">{aiPlanning.directionResult.candidates.map((candidate) => <button aria-pressed={selected?.id === candidate.id} className={selected?.id === candidate.id ? "ai-direction-card is-selected" : "ai-direction-card"} key={candidate.id} onClick={() => { setAiPlanning({ selectedCandidateId: candidate.id, actionPlan: null }); setSaved(false); }} type="button">
         <span className="ai-fit-label">{candidate.fit}</span><strong>{candidate.title}</strong><small>{candidate.specialization}</small><p>{candidate.rationale}</p>
         <dl><div><dt>可能处理</dt><dd>{candidate.problemExamples.join(" · ")}</dd></div><div><dt>需要验证</dt><dd>{candidate.evidenceNeeded.join(" · ")}</dd></div></dl>
@@ -206,7 +245,7 @@ export default function AiPlanningPage() {
           </div>
         )}
       </div>
-      <div className="ai-save-plan"><button className="button button-primary" onClick={savePlan} type="button"><Check size={17} />保存到行动计划</button>{saved && <Link className="button button-secondary" to="/student/roadmap">已保存，查看行动计划 <ArrowRight size={16} /></Link>}</div>
+      <div className="ai-save-plan"><button className="button button-primary" onClick={savePlan} type="button"><Check size={17} />保存到行动计划</button>{saved && <Link className="button button-secondary" to={savedLink}>已保存，查看行动计划 <span>定位到新添加项</span><ArrowRight size={16} /></Link>}</div>
     </section>}
   </PageShell>;
 }
